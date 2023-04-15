@@ -2,7 +2,9 @@ package com.example.myapp
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ActivityNotFoundException
+import android.app.Activity.RESULT_OK
+import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
@@ -15,7 +17,10 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultCallback
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,11 +36,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider.getUriForFile
 import com.example.myapp.ui.theme.MyappTheme
 import java.io.File
 import java.io.FileOutputStream
+
 
 class UploadPhoto : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,20 +63,72 @@ class UploadPhoto : ComponentActivity() {
 val bitmap = mutableStateOf<Bitmap?>(null)
 var direc = intent.value.getStringExtra("catalog")
 
+fun getImageUri(context: Context): Uri {
+    // 1
+    val directory = File(context.cacheDir, "images")
+    directory.mkdirs()
+    // 2
+    val file = File.createTempFile(
+        "selected_image_",
+        ".jpg",
+        directory
+    )
+    // 3
+    val authority = context.packageName + ".fileprovider"
+    // 4
+    return getUriForFile(
+        context,
+        authority,
+        file,
+    )
+}
+
+//var cam_uri: Uri? = null
+
+fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    if (resultCode == Activity.RESULT_OK) {
+        val photoUri = data?.data
+        if (photoUri != null) {
+            Log.d("sss","sssssss")
+        }
+    }
+}
 
 @Composable
-fun CameraScreen() {
+fun CameraCapture(onImageCaptured: (Uri) -> Unit) {
     val context = LocalContext.current
-    val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-    context.startActivity(intent)
-    rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                Log.d("ttttttttt", "ttttttttt")
-                val image = result.data?.extras?.get("data") as Bitmap
-                bitmap.value = image
-            }
-        }
+    LaunchedEffect(true) {
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        var imageFile = File("test.jpg")
+        val photoUri = imageFile.createNewFile()
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+        val activity = context
+        activity?.startActivity(intent)
+    }
 }
+//@Composable
+//fun CameraScreen() {
+//    val context = LocalContext.current
+//    val values = ContentValues()
+//    values.put(MediaStore.Images.Media.TITLE, "New Picture")
+//    values.put(MediaStore.Images.Media.DESCRIPTION, "From Camera")
+//    cam_uri = context.contentResolver.insert(
+//        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+//        values
+//    )
+//    val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+//    cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, cam_uri)
+//
+//    val startCamera: ActivityResultLauncher<Intent> =
+//        rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview())
+//
+//
+//    val launcher =
+//        rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) {
+//            bitmap.value = it
+//        }
+//    startCamera.launch(cameraIntent)
+//}
 
 
 @SuppressLint("UnrememberedMutableState")
@@ -121,7 +179,7 @@ fun ImagePicker() {
             Text(text = "Take a Photo")
         }
         if (openCam.value) {
-            CameraScreen()
+//            CameraScreen()
             openCam.value = false
         }
     }

@@ -53,8 +53,9 @@ class MainActivity : ComponentActivity() {
 
 val i = mutableStateOf(0)
 val showDialog = mutableStateOf(false)
+val openEditDialog = mutableStateOf(false)
 var colors = mapOf("Test" to mutableStateOf(Color.Black)).toMutableMap()
-
+var selectedTabIndex by mutableStateOf(0)
 var intent = mutableStateOf(Intent())
 
 
@@ -62,20 +63,24 @@ var intent = mutableStateOf(Intent())
 @Composable
 fun LoadData() {
     val f = File(LocalContext.current.filesDir, "data.txt")
-    val s = f.readLines()[0]
-    val map = s.split(",,,")
-    for (i in 0 until map.count()) {
-        if (map[i].contains("=")) {
-            val ss = map[i].split("=")
-            when {
-                ss[1] == "r" -> colors[ss[0]] = mutableStateOf(Color.Red)
-                ss[1] == "y" -> colors[ss[0]] = mutableStateOf(Color.Yellow)
-                ss[1] == "b" -> colors[ss[0]] = mutableStateOf(Color.Black)
+    var s = f.readLines().toString()
+    if(s!="")
+    {
+        val f = File(LocalContext.current.filesDir, "data.txt")
+        s = f.readLines()[0]
+        val map = s.split(",,,")
+        for (i in 0 until map.count()) {
+            if (map[i].contains("=")) {
+                val ss = map[i].split("=")
+                when {
+                    ss[1] == "r" -> colors[ss[0]] = mutableStateOf(Color.Red)
+                    ss[1] == "y" -> colors[ss[0]] = mutableStateOf(Color.Yellow)
+                    ss[1] == "b" -> colors[ss[0]] = mutableStateOf(Color.Black)
+                }
             }
         }
-
+        Log.d("Output data: ", colors.toString())
     }
-    Log.d("Output data: ", colors.toString())
 }
 
 @Composable
@@ -106,19 +111,24 @@ fun ImageFromFile(filePath: String, s: String) {
     )
 }
 
+@ExperimentalFoundationApi
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun ImagesTextBox(fileName: String, index: Int, s: String) {
     Box(
         modifier = Modifier
             .padding(2.dp)
-            .background(colors[fileName]!!.value)
+            .background(colors[s+fileName]!!.value)
             .size(150.dp)
-            .clickable(
+            .combinedClickable(
                 onClick = {
                     showDialog.value = true
                     i.value = index
-                }
+                },
+                onLongClick = {
+                    openEditDialog.value = true
+                    i.value = index
+                },
             )
     ) {
         ImageFromFile(fileName, s)
@@ -196,12 +206,17 @@ fun catalogs(cats: String) {
                     UploadBox(s)
                 } else {
                     if (showDialog.value) {
-                        ChangeColor(files[i.value].name)
+                        ChangeColor(s+files[i.value].name)
                         showDialog.value = false
                     }
-                    if (!colors.containsKey(files[index].name))
-                        colors[files[index].name] =
+                    if (!colors.containsKey(s+files[index].name))
+                        colors[s+files[index].name] =
                             remember { mutableStateOf(Color.Black) }
+
+                    if (openEditDialog.value) {
+                        openEditableActivity(files[i.value].name,s)
+                        openEditDialog.value = false
+                    }
                     ImagesTextBox(files[index].name, index, s)
                 }
             }
@@ -213,12 +228,24 @@ fun catalogs(cats: String) {
     }
 }
 
+@Composable
+fun openEditableActivity(name: String,cat:String) {
+    val context= LocalContext.current
+    intent.value = Intent(context, EditPhoto::class.java).apply {
+        putExtra("catalog", cat)
+        putExtra("name", name)
+    }
+    context.startActivity(intent.value)
+}
+
 
 @ExperimentalFoundationApi
 @Composable
 fun Tabs() {
     val tabs = listOf("Chest", "Biceps", "Triceps", "Shoulder", "Back", "Legs")
-    var selectedTabIndex by remember { mutableStateOf(0) }
+//    val tabsindex = intent1.value.getStringExtra("tab")
+//    if(!tabsindex.isNullOrEmpty())
+//        selectedTabIndex=tabs.indexOf(tabsindex)
     Column {
         ScrollableTabRow(
             selectedTabIndex,
