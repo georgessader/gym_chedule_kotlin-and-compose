@@ -1,7 +1,9 @@
 package com.example.myapp
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.GridCells
 import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,10 +28,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.myapp.ui.theme.MyappTheme
 import java.io.File
 
 class MainActivity : ComponentActivity() {
+    @ExperimentalFoundationApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -37,56 +43,51 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    loadData()
-                    tabs()
+                    LoadData()
+                    Tabs()
                 }
             }
         }
     }
 }
 
+val i = mutableStateOf(0)
+val showDialog = mutableStateOf(false)
 var colors = mapOf("Test" to mutableStateOf(Color.Black)).toMutableMap()
-var colorsCode = mapOf(
-    "r" to mutableStateOf(Color.Red),
-    "y" to mutableStateOf(Color.Yellow),
-    "b" to mutableStateOf(Color.Black)
-).toMutableMap()
 
+var intent = mutableStateOf(Intent())
 
-@Composable
-fun Greeting(name: String) {
-    Text(text = "Hello $name!")
-}
 
 @SuppressLint("UnrememberedMutableState")
 @Composable
-fun loadData()
-{
+fun LoadData() {
     val f = File(LocalContext.current.filesDir, "data.txt")
-    val s=f.readLines()[0]
+    val s = f.readLines()[0]
     val map = s.split(",,,")
-    for (i in 0..map.count()-1)
-    {
-        if(map[i].contains("="))
-        {
-            val ss=map[i].split("=")
-            if(ss[1]=="r")
-                colors[ss[0]]=mutableStateOf(Color.Red)
-            else if(ss[1]=="y")
-                colors[ss[0]]=mutableStateOf(Color.Yellow)
-            else if(ss[1]=="b")
-                colors[ss[0]]=mutableStateOf(Color.Black)
+    for (i in 0 until map.count()) {
+        if (map[i].contains("=")) {
+            val ss = map[i].split("=")
+            when {
+                ss[1] == "r" -> colors[ss[0]] = mutableStateOf(Color.Red)
+                ss[1] == "y" -> colors[ss[0]] = mutableStateOf(Color.Yellow)
+                ss[1] == "b" -> colors[ss[0]] = mutableStateOf(Color.Black)
+            }
         }
 
     }
-    Log.d("dddddddddddddddddd", colors.toString())
+    Log.d("Output data: ", colors.toString())
 }
 
 @Composable
-fun ImageFromFile(filePath: String) {
-
-
-    val file = File(filePath)
+fun ImageFromFile(filePath: String, s: String) {
+    val context = LocalContext.current
+    val imageDirectory = File(
+        ContextCompat.getExternalFilesDirs(
+            context,
+            Environment.DIRECTORY_PICTURES
+        )[0], s
+    )
+    val file = File(imageDirectory, filePath)
     val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
 
     val painter: Painter = if (bitmap != null) {
@@ -94,7 +95,6 @@ fun ImageFromFile(filePath: String) {
     } else {
         ColorPainter(color = Color.Red)
     }
-
     Image(
         painter = painter,
         modifier = Modifier
@@ -106,12 +106,120 @@ fun ImageFromFile(filePath: String) {
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@SuppressLint("UnrememberedMutableState")
 @Composable
-fun tabs() {
+fun ImagesTextBox(fileName: String, index: Int, s: String) {
+    Box(
+        modifier = Modifier
+            .padding(2.dp)
+            .background(colors[fileName]!!.value)
+            .size(150.dp)
+            .clickable(
+                onClick = {
+                    showDialog.value = true
+                    i.value = index
+                }
+            )
+    ) {
+        ImageFromFile(fileName, s)
+        Column(
+            verticalArrangement = Arrangement.Top,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Black)
+                .alpha(0.9f)
+                .padding(4.dp)
+                .align(Alignment.BottomStart)
+        ) {
+            Text(
+                text = fileName.replace(".jpg", ""),
+                color = Color.White,
+                fontSize = 10.sp,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+fun UploadBox(dir: String) {
+    val context = LocalContext.current
+    Box(
+        modifier = Modifier
+            .padding(2.dp)
+            .background(Color.White)
+            .size(150.dp)
+    ) {
+        IconButton(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Gray),
+
+            onClick = {
+                intent.value = Intent(context, UploadPhoto::class.java).apply {
+                    putExtra("catalog", dir)
+                }
+                context.startActivity(intent.value)
+            }) {
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = "Add"
+            )
+        }
+
+    }
+}
+
+@ExperimentalFoundationApi
+@Composable
+fun catalogs(cats: String) {
+    val s = cats
+    val context = LocalContext.current
+    val imageDirectory = File(
+        ContextCompat.getExternalFilesDirs(
+            context,
+            Environment.DIRECTORY_PICTURES
+        )[0], s
+    )
+    val directory = File(imageDirectory.toString())
+    val files = directory.listFiles()
+
+    LazyVerticalGrid(
+        cells = GridCells.Fixed(3), // set the number of columns
+        contentPadding = PaddingValues(16.dp) // set the padding between items
+    ) {
+        if (!files.isNullOrEmpty()) {
+            items(files.size + 1) { index ->
+                if (index == files.size) {
+                    UploadBox(s)
+                } else {
+                    if (showDialog.value) {
+                        ChangeColor(files[i.value].name)
+                        showDialog.value = false
+                    }
+                    if (!colors.containsKey(files[index].name))
+                        colors[files[index].name] =
+                            remember { mutableStateOf(Color.Black) }
+                    ImagesTextBox(files[index].name, index, s)
+                }
+            }
+        } else {
+            items(1) {
+                UploadBox(s)
+            }
+        }
+    }
+}
+
+
+@ExperimentalFoundationApi
+@Composable
+fun Tabs() {
     val tabs = listOf("Chest", "Biceps", "Triceps", "Shoulder", "Back", "Legs")
     var selectedTabIndex by remember { mutableStateOf(0) }
-    Column() {
+    Column {
         ScrollableTabRow(
             selectedTabIndex,
             edgePadding = 0.dp,
@@ -136,58 +244,22 @@ fun tabs() {
         }
         when (selectedTabIndex) {
             0 -> {
-                val directory = File("/storage/emulated/0/gymimages")
-                val files = directory.listFiles()
-                val showDialog = mutableStateOf(false)
-                val i = mutableStateOf(0)
-
-                LazyVerticalGrid(
-                    cells = GridCells.Fixed(3), // set the number of columns
-                    contentPadding = PaddingValues(16.dp) // set the padding between items
-                ) {
-
-                    items(files.size) { index ->
-                        if(showDialog.value) {
-                            changeColor(files[i.value].name);
-                            showDialog.value = false
-                        }
-                        if(!colors.containsKey(files[index].name) )
-                            colors[files[index].name] = remember { mutableStateOf(Color.Black) }
-                        Box(
-                            modifier = Modifier
-                                .padding(2.dp)
-                                .background(colors[files[index].name]!!.value)
-                                .size(150.dp)
-                                .clickable(
-                                    onClick = {
-                                        showDialog.value = true
-                                        i.value=index
-                                    }
-                                )
-                        ) {
-                            val s = files[index].name;
-                            ImageFromFile("/storage/emulated/0/gymimages/$s")
-                            Column(
-                                verticalArrangement = Arrangement.Top,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color.Black)
-                                    .alpha(0.9f)
-                                    .padding(4.dp)
-                                    .align(Alignment.BottomStart)
-                            ) {
-                                Text(
-                                    text = s.replace(".jpg", ""),
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    overflow = TextOverflow.Ellipsis,
-                                    maxLines = 1,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-                        }
-                    }
-                }
+                catalogs(tabs[0])
+            }
+            1 -> {
+                catalogs(tabs[1])
+            }
+            2 -> {
+                catalogs(tabs[2])
+            }
+            3 -> {
+                catalogs(tabs[3])
+            }
+            4 -> {
+                catalogs(tabs[4])
+            }
+            5 -> {
+                catalogs(tabs[5])
             }
         }
     }
@@ -195,32 +267,32 @@ fun tabs() {
 
 
 @Composable
-fun changeColor(s: String) {
-    if (colors[s]!!.value == Color.Red)
-        colors[s]!!.value = Color.Yellow
-    else if (colors[s]!!.value == Color.Yellow)
-        colors[s]!!.value = Color.Black
-    else
-        colors[s]!!.value = Color.Red
+fun ChangeColor(s: String) {
+    when (colors[s]!!.value) {
+        Color.Red -> colors[s]!!.value = Color.Yellow
+        Color.Yellow -> colors[s]!!.value = Color.Black
+        else -> colors[s]!!.value = Color.Red
+    }
 
-    var s=""
-    colors.forEach { (key, value) ->
-        s+="$key="
+    var s = ""
+    colors.forEach { (key) ->
+        s += "$key="
         if (colors[key]!!.value == Color.Red)
-            s+="r,,,"
+            s += "r,,,"
         else if (colors[key]!!.value == Color.Yellow)
-            s+="y,,,"
+            s += "y,,,"
         else
-            s+="b,,,"
+            s += "b,,,"
     }
     val file = File(LocalContext.current.filesDir, "data.txt")
     file.writeText(s)
 }
 
+@ExperimentalFoundationApi
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     MyappTheme {
-        tabs()
+        Tabs()
     }
 }
