@@ -291,7 +291,7 @@ fun First() {
 
                 }
                 val outputStream = FileOutputStream(imageFile)
-                bitmap.value!!.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                bitmap.value!!.compress(Bitmap.CompressFormat.JPEG, 10, outputStream)
                 outputStream.flush()
                 outputStream.close()
                 up.value = false

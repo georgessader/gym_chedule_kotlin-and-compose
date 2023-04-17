@@ -1,5 +1,6 @@
 package com.example.myapp
 
+import android.annotation.SuppressLint
 import android.content.ContentValues.TAG
 import android.content.Intent
 import android.graphics.Bitmap
@@ -124,9 +125,12 @@ fun deleteFile(od: String?, on: String?) {
     )
     val file = File(imageDirectory, on)
     file.delete()
+    colors.remove(od+on)
+    saveColors()
     context.startActivity(Intent(context, MainActivity::class.java))
 }
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
 fun editFile(od: String?, on: String?, n: String?, catchanged: String) {
     val context = LocalContext.current
@@ -160,6 +164,10 @@ fun editFile(od: String?, on: String?, n: String?, catchanged: String) {
 
         val file1 = File(imageDirectory1, on)
         file1.delete()
+
+        colors["$catchanged$n.jpg"]=mutableStateOf(colors[od+on]!!.value)
+        colors.remove(od+on)
+        saveColors()
         context.startActivity(Intent(context, MainActivity::class.java))
     } else {
         Text(text = "Empty Exercise name")

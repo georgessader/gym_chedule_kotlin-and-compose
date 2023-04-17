@@ -30,7 +30,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.myapp.ui.theme.MyappTheme
+import java.io.BufferedReader
 import java.io.File
+import java.io.FileReader
 
 class MainActivity : ComponentActivity() {
     @ExperimentalFoundationApi
@@ -63,8 +65,9 @@ var intent = mutableStateOf(Intent())
 @Composable
 fun LoadData() {
     val f = File(LocalContext.current.filesDir, "data.txt")
-    var s = f.readLines().toString()
-    if(s!="")
+    val br = BufferedReader(FileReader(f))
+    var s=""
+    if(br.readLine() != null)
     {
         val f = File(LocalContext.current.filesDir, "data.txt")
         s = f.readLines()[0]
@@ -292,15 +295,9 @@ fun Tabs() {
     }
 }
 
-
 @Composable
-fun ChangeColor(s: String) {
-    when (colors[s]!!.value) {
-        Color.Red -> colors[s]!!.value = Color.Yellow
-        Color.Yellow -> colors[s]!!.value = Color.Black
-        else -> colors[s]!!.value = Color.Red
-    }
-
+fun saveColors()
+{
     var s = ""
     colors.forEach { (key) ->
         s += "$key="
@@ -311,8 +308,19 @@ fun ChangeColor(s: String) {
         else
             s += "b,,,"
     }
+//    s = ""
     val file = File(LocalContext.current.filesDir, "data.txt")
     file.writeText(s)
+}
+
+@Composable
+fun ChangeColor(s: String) {
+    when (colors[s]!!.value) {
+        Color.Red -> colors[s]!!.value = Color.Yellow
+        Color.Yellow -> colors[s]!!.value = Color.Black
+        else -> colors[s]!!.value = Color.Red
+    }
+    saveColors()
 }
 
 @ExperimentalFoundationApi
