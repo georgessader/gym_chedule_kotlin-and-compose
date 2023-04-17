@@ -166,7 +166,6 @@ fun editFile(od: String?, on: String?, n: String?, catchanged: String) {
         file1.delete()
 
         colors["$catchanged$n.jpg"]=mutableStateOf(colors[od+on]!!.value)
-        
         colors.remove(od+on)
         saveColors()
         context.startActivity(Intent(context, MainActivity::class.java))
