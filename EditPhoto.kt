@@ -56,7 +56,7 @@ class EditPhoto : ComponentActivity() {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
+                    color = Color(0x44B22828)
                 ) {
                     Firste()
                 }
@@ -93,7 +93,7 @@ fun getBitmapFromUri(d: String?, n: String?): Bitmap? {
 fun DropDownLl(s: String?): String {
     var expanded by remember { mutableStateOf(false) }
     var selectedItem by remember { mutableStateOf(s) }
-    Box(modifier = Modifier.width(200.dp)) {
+    Box(modifier = Modifier.width(200.dp),) {
         TextButton(
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth()
@@ -131,7 +131,7 @@ fun deleteFile(od: String?, on: String?) {
     )
     val file = File(imageDirectory, on)
     file.delete()
-    colors.remove(od+on)
+    colors.remove(od + on)
     saveColors()
     context.startActivity(Intent(context, MainActivity::class.java))
 }
@@ -171,8 +171,8 @@ fun editFile(od: String?, on: String?, n: String?, catchanged: String) {
         val file1 = File(imageDirectory1, on)
         file1.delete()
 
-        colors["$catchanged$n.jpg"]=mutableStateOf(colors[od+on]!!.value)
-        colors.remove(od+on)
+        colors["$catchanged$n.jpg"] = mutableStateOf(colors[od + on]!!.value)
+        colors.remove(od + on)
         saveColors()
         context.startActivity(Intent(context, MainActivity::class.java))
     } else {

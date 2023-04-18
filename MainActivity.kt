@@ -24,26 +24,35 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.GridCells
 import androidx.compose.foundation.lazy.LazyVerticalGrid
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
+
 
 class MainActivity : ComponentActivity() {
     @ExperimentalFoundationApi
@@ -54,20 +63,20 @@ class MainActivity : ComponentActivity() {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
+                    color = Color(0x44B22828)
                 ) {
                     RequestStoragePermissions(
                         onPermissionGranted = {
-                            granted.value=true
+                            granted.value = true
                         },
                         onPermissionDenied = {
-                            granted.value=false
+                            granted.value = false
                         }
                     )
-                    if(granted.value)
-                    {
+                    if (granted.value) {
                         LoadData()
                         Tabs()
+
                     }
                 }
             }
@@ -75,11 +84,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-val granted=mutableStateOf(false)
+val granted = mutableStateOf(false)
 val i = mutableStateOf(0)
 val showDialog = mutableStateOf(false)
 val openEditDialog = mutableStateOf(false)
-var colors = mapOf("Test" to mutableStateOf(Color.Black)).toMutableMap()
+var colors = mapOf("Test" to mutableStateOf(Color.Green)).toMutableMap()
 var selectedTabIndex by mutableStateOf(0)
 var intent = mutableStateOf(Intent())
 
@@ -88,12 +97,10 @@ var intent = mutableStateOf(Intent())
 @Composable
 fun LoadData() {
     val f = File(LocalContext.current.filesDir, "data.txt")
-    if(f.exists())
-    {
+    if (f.exists()) {
         val br = BufferedReader(FileReader(f))
-        var s=""
-        if(br.readLine() != null)
-        {
+        var s = ""
+        if (br.readLine() != null) {
             val f = File(LocalContext.current.filesDir, "data.txt")
             s = f.readLines()[0]
             val map = s.split(",,,")
@@ -103,7 +110,7 @@ fun LoadData() {
                     when {
                         ss[1] == "r" -> colors[ss[0]] = mutableStateOf(Color.Red)
                         ss[1] == "y" -> colors[ss[0]] = mutableStateOf(Color.Yellow)
-                        ss[1] == "b" -> colors[ss[0]] = mutableStateOf(Color.Black)
+                        ss[1] == "b" -> colors[ss[0]] = mutableStateOf(Color.Green)
                     }
                 }
             }
@@ -134,8 +141,8 @@ fun ImageFromFile(filePath: String, s: String) {
         painter = painter,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(6.dp)
-            .height(120.dp), //Remove the offset here
+            .fillMaxHeight(0.7f)
+            .padding(6.dp),
         alignment = Alignment.Center,
         contentDescription = ""
     )
@@ -144,41 +151,73 @@ fun ImageFromFile(filePath: String, s: String) {
 @ExperimentalFoundationApi
 @SuppressLint("UnrememberedMutableState")
 @Composable
-fun ImagesTextBox(fileName: String, index: Int, s: String) {
+fun ImagesTextBox(fileName: String, index: Int, cat: String) {
+    val checkDel = remember { mutableStateOf<Boolean>(false) }
     Box(
         modifier = Modifier
             .padding(2.dp)
-            .background(colors[s+fileName]!!.value)
-            .size(150.dp)
+            .background(Color(0xFFB22828),RoundedCornerShape(16.dp))
+            .size(200.dp)
             .combinedClickable(
                 onClick = {
                     showDialog.value = true
                     i.value = index
                 },
-                onLongClick = {
-                    openEditDialog.value = true
-                    i.value = index
-                },
             )
     ) {
-        ImageFromFile(fileName, s)
+        ImageFromFile(fileName, cat)
         Column(
             verticalArrangement = Arrangement.Top,
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.Black)
+                .fillMaxHeight(0.3f)
+                .background(Color(0xFFB22828),RoundedCornerShape(16.dp))
                 .alpha(0.9f)
                 .padding(4.dp)
                 .align(Alignment.BottomStart)
         ) {
             Text(
                 text = fileName.replace(".jpg", ""),
+                textAlign = TextAlign.Center,
                 color = Color.White,
                 fontSize = 10.sp,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Divider(
+                color = Color.White,
+                thickness = 1.dp
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+            )
+            {
+                Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = "Edit",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .padding(5.dp)
+                        .size(25.dp)
+                        .clickable {
+                            checkDel.value = true
+                        }
+                )
+                Text(
+                    modifier = Modifier
+                        .padding(horizontal =  10.dp),
+                    text = "⬤",
+                    color = colors[cat + fileName]!!.value,
+                )
+                if (checkDel.value) {
+                    openEditDialog.value = true
+                    i.value = index
+                    checkDel.value = false
+                }
+
+            }
         }
     }
 }
@@ -189,13 +228,12 @@ fun UploadBox(dir: String) {
     Box(
         modifier = Modifier
             .padding(2.dp)
-            .background(Color.White)
-            .size(150.dp)
+            .border(4.dp, Color(0xFFB22828),RoundedCornerShape(16.dp))
+            .size(200.dp)
     ) {
         IconButton(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Gray),
+                .fillMaxSize(),
 
             onClick = {
                 intent.value = Intent(context, UploadPhoto::class.java).apply {
@@ -204,8 +242,11 @@ fun UploadBox(dir: String) {
                 context.startActivity(intent.value)
             }) {
             Icon(
-                Icons.Filled.Add,
-                contentDescription = "Add"
+                imageVector = Icons.Outlined.AddCircle,
+                contentDescription = "Edit",
+                tint = Color(0xFFB22828),
+                modifier = Modifier
+                    .size(60.dp)
             )
         }
 
@@ -236,15 +277,15 @@ fun catalogs(cats: String) {
                     UploadBox(s)
                 } else {
                     if (showDialog.value) {
-                        ChangeColor(s+files[i.value].name)
+                        ChangeColor(s + files[i.value].name)
                         showDialog.value = false
                     }
-                    if (!colors.containsKey(s+files[index].name))
-                        colors[s+files[index].name] =
-                            remember { mutableStateOf(Color.Black) }
+                    if (!colors.containsKey(s + files[index].name))
+                        colors[s + files[index].name] =
+                            remember { mutableStateOf(Color.Green) }
 
                     if (openEditDialog.value) {
-                        openEditableActivity(files[i.value].name,s)
+                        openEditableActivity(files[i.value].name, s)
                         openEditDialog.value = false
                     }
                     ImagesTextBox(files[index].name, index, s)
@@ -259,8 +300,8 @@ fun catalogs(cats: String) {
 }
 
 @Composable
-fun openEditableActivity(name: String,cat:String) {
-    val context= LocalContext.current
+fun openEditableActivity(name: String, cat: String) {
+    val context = LocalContext.current
     intent.value = Intent(context, EditPhoto::class.java).apply {
         putExtra("catalog", cat)
         putExtra("name", name)
@@ -302,7 +343,9 @@ class PermissionResultCallback(
 
     override fun onActivityResult(result: Map<String, Boolean>?) {
         val permissions = result?.keys?.toTypedArray() ?: emptyArray()
-        val grantResults = result?.values?.map { if (it) PackageManager.PERMISSION_GRANTED else PackageManager.PERMISSION_DENIED }?.toIntArray() ?: IntArray(0)
+        val grantResults =
+            result?.values?.map { if (it) PackageManager.PERMISSION_GRANTED else PackageManager.PERMISSION_DENIED }
+                ?.toIntArray() ?: IntArray(0)
         onPermissionGranted(permissions, grantResults)
     }
 }
@@ -322,7 +365,9 @@ fun Tabs() {
         ) {
             tabs.forEachIndexed { index, text ->
                 Tab(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFB22828)),
                     selected = selectedTabIndex == index,
                     onClick = { selectedTabIndex = index },
                     text = {
@@ -359,8 +404,7 @@ fun Tabs() {
 }
 
 @Composable
-fun saveColors()
-{
+fun saveColors() {
     var s = ""
     colors.forEach { (key) ->
         s += "$key="
@@ -380,7 +424,7 @@ fun saveColors()
 fun ChangeColor(s: String) {
     when (colors[s]!!.value) {
         Color.Red -> colors[s]!!.value = Color.Yellow
-        Color.Yellow -> colors[s]!!.value = Color.Black
+        Color.Yellow -> colors[s]!!.value = Color.Green
         else -> colors[s]!!.value = Color.Red
     }
     saveColors()

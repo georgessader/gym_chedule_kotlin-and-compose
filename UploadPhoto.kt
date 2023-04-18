@@ -31,14 +31,21 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Place
+import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -56,7 +63,7 @@ class UploadPhoto : ComponentActivity() {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
+                    color = Color(0x44B22828)
                 ) {
                     First()
                 }
@@ -94,7 +101,7 @@ fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     if (resultCode == Activity.RESULT_OK) {
         val photoUri = data?.data
         if (photoUri != null) {
-            Log.d("sss","sssssss")
+            Log.d("sss", "sssssss")
         }
     }
 }
@@ -111,29 +118,6 @@ fun CameraCapture(onImageCaptured: (Uri) -> Unit) {
         activity?.startActivity(intent)
     }
 }
-//@Composable
-//fun CameraScreen() {
-//    val context = LocalContext.current
-//    val values = ContentValues()
-//    values.put(MediaStore.Images.Media.TITLE, "New Picture")
-//    values.put(MediaStore.Images.Media.DESCRIPTION, "From Camera")
-//    cam_uri = context.contentResolver.insert(
-//        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-//        values
-//    )
-//    val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-//    cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, cam_uri)
-//
-//    val startCamera: ActivityResultLauncher<Intent> =
-//        rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview())
-//
-//
-//    val launcher =
-//        rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) {
-//            bitmap.value = it
-//        }
-//    startCamera.launch(cameraIntent)
-//}
 
 
 @SuppressLint("UnrememberedMutableState")
@@ -164,27 +148,32 @@ fun ImagePicker() {
     }
     var openCam = remember { mutableStateOf<Boolean>(false) }
 
-    Column(
+    Row(
         modifier = Modifier.padding(16.dp),
+        //horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Button(
-            onClick = { launcher.launch("image/*") },
-            modifier = Modifier.padding(vertical = 8.dp),
-        ) {
-            Text(text = "Pick Image")
-        }
-        Button(
-            onClick = {
-
-                Log.d("cammmmm", "done")
-                openCam.value = true
-            },
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            Text(text = "Take a Photo")
-        }
+        Icon(
+            imageVector = Icons.Outlined.Home,
+            contentDescription = "Edit",
+            tint = Color(0xFFB22828),
+            modifier = Modifier
+                .padding(5.dp)
+                .size(25.dp)
+                .clickable { launcher.launch("image/*") }
+        )
+        Icon(
+            Icons.Rounded.ShoppingCart,
+            contentDescription = "Edit",
+            tint = Color(0xFFB22828),
+            modifier = Modifier
+                .padding(5.dp)
+                .size(25.dp)
+                .clickable {
+                    openCam.value = true
+                }
+        )
         if (openCam.value) {
-//            CameraScreen()
+            //CameraScreen()
             openCam.value = false
         }
     }
@@ -229,26 +218,33 @@ fun First() {
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier.size(250.dp)
-        ) {
-            Card(
-                modifier = Modifier.fillMaxSize(),
-                shape = RoundedCornerShape(8.dp),
-                elevation = 8.dp
+        if (bitmap.value != null) {
+            Box(
+                modifier = Modifier
+                    .size(250.dp)
+                    .padding(6.dp)
+
             ) {
-                bitmap.value?.let {
-                    Image(
-                        bitmap = it.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(6.dp)
-                            .height(120.dp)
-                    )
+                Card(
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RoundedCornerShape(8.dp),
+                    elevation = 8.dp
+                ) {
+                    bitmap.value?.let {
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFFB22828))
+                                .padding(6.dp)
+                                .height(120.dp)
+                        )
+                    }
                 }
             }
         }
+
         ImagePicker()
         val s: String = DropDownL()
         var ename by remember { mutableStateOf("") }
