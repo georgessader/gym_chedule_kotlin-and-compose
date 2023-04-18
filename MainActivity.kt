@@ -1,12 +1,25 @@
-package com.example.myapp
+package com.example.gymschedule
 
-import android.annotation.SuppressLint
-import android.content.Intent
+import android.Manifest
 import android.os.Bundle
-import android.os.Environment
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.gymschedule.ui.theme.GymScheduleTheme
+import android.annotation.SuppressLint
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Environment
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.GridCells
@@ -16,7 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -25,11 +37,10 @@ import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.myapp.ui.theme.MyappTheme
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
@@ -39,20 +50,32 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MyappTheme {
+            GymScheduleTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    LoadData()
-                    Tabs()
+                    RequestStoragePermissions(
+                        onPermissionGranted = {
+                            granted.value=true
+                        },
+                        onPermissionDenied = {
+                            granted.value=false
+                        }
+                    )
+                    if(granted.value)
+                    {
+                        LoadData()
+                        Tabs()
+                    }
                 }
             }
         }
     }
 }
 
+val granted=mutableStateOf(false)
 val i = mutableStateOf(0)
 val showDialog = mutableStateOf(false)
 val openEditDialog = mutableStateOf(false)
@@ -65,25 +88,29 @@ var intent = mutableStateOf(Intent())
 @Composable
 fun LoadData() {
     val f = File(LocalContext.current.filesDir, "data.txt")
-    val br = BufferedReader(FileReader(f))
-    var s=""
-    if(br.readLine() != null)
+    if(f.exists())
     {
-        val f = File(LocalContext.current.filesDir, "data.txt")
-        s = f.readLines()[0]
-        val map = s.split(",,,")
-        for (i in 0 until map.count()) {
-            if (map[i].contains("=")) {
-                val ss = map[i].split("=")
-                when {
-                    ss[1] == "r" -> colors[ss[0]] = mutableStateOf(Color.Red)
-                    ss[1] == "y" -> colors[ss[0]] = mutableStateOf(Color.Yellow)
-                    ss[1] == "b" -> colors[ss[0]] = mutableStateOf(Color.Black)
+        val br = BufferedReader(FileReader(f))
+        var s=""
+        if(br.readLine() != null)
+        {
+            val f = File(LocalContext.current.filesDir, "data.txt")
+            s = f.readLines()[0]
+            val map = s.split(",,,")
+            for (i in 0 until map.count()) {
+                if (map[i].contains("=")) {
+                    val ss = map[i].split("=")
+                    when {
+                        ss[1] == "r" -> colors[ss[0]] = mutableStateOf(Color.Red)
+                        ss[1] == "y" -> colors[ss[0]] = mutableStateOf(Color.Yellow)
+                        ss[1] == "b" -> colors[ss[0]] = mutableStateOf(Color.Black)
+                    }
                 }
             }
+            Log.d("Output data: ", colors.toString())
         }
-        Log.d("Output data: ", colors.toString())
     }
+
 }
 
 @Composable
@@ -241,14 +268,50 @@ fun openEditableActivity(name: String,cat:String) {
     context.startActivity(intent.value)
 }
 
+@Composable
+fun RequestStoragePermissions(
+    onPermissionGranted: () -> Unit,
+    onPermissionDenied: () -> Unit
+) {
+    val context = LocalContext.current
+    val permissions = arrayOf(
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.INTERNET,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE
+    )
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.all { it.value }
+        if (granted) {
+            onPermissionGranted()
+        } else {
+            onPermissionDenied()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        launcher.launch(permissions)
+    }
+}
+
+
+class PermissionResultCallback(
+    private val onPermissionGranted: (Any?, Any?) -> Unit
+) : ActivityResultCallback<Map<String, Boolean>> {
+
+    override fun onActivityResult(result: Map<String, Boolean>?) {
+        val permissions = result?.keys?.toTypedArray() ?: emptyArray()
+        val grantResults = result?.values?.map { if (it) PackageManager.PERMISSION_GRANTED else PackageManager.PERMISSION_DENIED }?.toIntArray() ?: IntArray(0)
+        onPermissionGranted(permissions, grantResults)
+    }
+}
+
 
 @ExperimentalFoundationApi
 @Composable
 fun Tabs() {
     val tabs = listOf("Chest", "Biceps", "Triceps", "Shoulder", "Back", "Legs")
-//    val tabsindex = intent1.value.getStringExtra("tab")
-//    if(!tabsindex.isNullOrEmpty())
-//        selectedTabIndex=tabs.indexOf(tabsindex)
     Column {
         ScrollableTabRow(
             selectedTabIndex,
@@ -327,7 +390,7 @@ fun ChangeColor(s: String) {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
-    MyappTheme {
+    GymScheduleTheme {
         Tabs()
     }
 }
