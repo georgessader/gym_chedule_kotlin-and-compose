@@ -1,26 +1,26 @@
 package com.example.gymschedule
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.gymschedule.ui.theme.GymScheduleTheme
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.app.Instrumentation
+import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,14 +34,29 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.content.ContextCompat
+import com.example.gymschedule.ui.theme.GymScheduleTheme
 import java.io.File
 import java.io.FileOutputStream
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.launch
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.Button
+import androidx.compose.material.Text
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.asImageBitmap
+
 
 class UploadPhoto : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,10 +79,10 @@ val bitmap = mutableStateOf<Bitmap?>(null)
 var direc = intent.value.getStringExtra("catalog")
 
 
-
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun ImagePicker() {
+    var openCam = remember { mutableStateOf(false) }
     var imageUri by remember {
         mutableStateOf<Uri?>(null)
     }
@@ -90,7 +105,12 @@ fun ImagePicker() {
             bitmap.value = ImageDecoder.decodeBitmap(source)
         }
     }
-    val openCam = remember { mutableStateOf(false) }
+
+    val result = remember { mutableStateOf<Bitmap?>(null) }
+    val launcherr = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) {
+        result.value = it
+    }
+
 
     Row(
         modifier = Modifier.padding(16.dp),
@@ -112,15 +132,15 @@ fun ImagePicker() {
                 .padding(5.dp)
                 .size(25.dp)
                 .clickable {
-                    openCam.value = true
+                    launcherr.launch()
                 }
         )
-        if (openCam.value) {
-            //CameraScreen()
-            openCam.value = false
+        result.value?.let { image ->
+            bitmap.value=image
         }
     }
 }
+
 
 @Composable
 fun dropDownL(): String {
@@ -229,7 +249,7 @@ fun First() {
 
                     }
                     val outputStream = FileOutputStream(imageFile)
-                    bitmap.value!!.compress(Bitmap.CompressFormat.JPEG, 10, outputStream)
+                    bitmap.value!!.compress(Bitmap.CompressFormat.JPEG, 50, outputStream)
                     outputStream.flush()
                     outputStream.close()
                     up.value = false
