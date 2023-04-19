@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -13,12 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.gymschedule.ui.theme.GymScheduleTheme
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Environment
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -27,28 +25,21 @@ import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
@@ -76,7 +67,6 @@ class MainActivity : ComponentActivity() {
                     if (granted.value) {
                         LoadData()
                         Tabs()
-
                     }
                 }
             }
@@ -85,9 +75,6 @@ class MainActivity : ComponentActivity() {
 }
 
 val granted = mutableStateOf(false)
-val i = mutableStateOf(0)
-val showDialog = mutableStateOf(false)
-val openEditDialog = mutableStateOf(false)
 var colors = mapOf("Test" to mutableStateOf(Color.Green)).toMutableMap()
 var selectedTabIndex by mutableStateOf(0)
 var intent = mutableStateOf(Intent())
@@ -99,9 +86,8 @@ fun LoadData() {
     val f = File(LocalContext.current.filesDir, "data.txt")
     if (f.exists()) {
         val br = BufferedReader(FileReader(f))
-        var s = ""
+        val s: String
         if (br.readLine() != null) {
-            val f = File(LocalContext.current.filesDir, "data.txt")
             s = f.readLines()[0]
             val map = s.split(",,,")
             for (i in 0 until map.count()) {
@@ -142,7 +128,11 @@ fun ImageFromFile(filePath: String, s: String) {
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight(0.7f)
-            .padding(6.dp),
+            .padding(6.dp)
+            .clickable {
+                val st = s + filePath
+                changeColor(st)
+            },
         alignment = Alignment.Center,
         contentDescription = ""
     )
@@ -151,27 +141,23 @@ fun ImageFromFile(filePath: String, s: String) {
 @ExperimentalFoundationApi
 @SuppressLint("UnrememberedMutableState")
 @Composable
-fun ImagesTextBox(fileName: String, index: Int, cat: String) {
-    val checkDel = remember { mutableStateOf<Boolean>(false) }
+fun ImagesTextBox(fileName: String, cat: String) {
+    val cont= LocalContext.current
     Box(
         modifier = Modifier
             .padding(2.dp)
-            .background(Color(0xFFB22828),RoundedCornerShape(16.dp))
-            .size(200.dp)
-            .combinedClickable(
-                onClick = {
-                    showDialog.value = true
-                    i.value = index
-                },
-            )
-    ) {
+            .background(Color(0xFFB22828), RoundedCornerShape(16.dp))
+            .size(200.dp),
+
+        ) {
+        SaveColors()
         ImageFromFile(fileName, cat)
         Column(
             verticalArrangement = Arrangement.Top,
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.3f)
-                .background(Color(0xFFB22828),RoundedCornerShape(16.dp))
+                .background(Color(0xFFB22828), RoundedCornerShape(16.dp))
                 .alpha(0.9f)
                 .padding(4.dp)
                 .align(Alignment.BottomStart)
@@ -202,21 +188,15 @@ fun ImagesTextBox(fileName: String, index: Int, cat: String) {
                         .padding(5.dp)
                         .size(25.dp)
                         .clickable {
-                            checkDel.value = true
+                            openEditableActivity(cont,fileName, cat)
                         }
                 )
                 Text(
                     modifier = Modifier
-                        .padding(horizontal =  10.dp),
+                        .padding(horizontal = 10.dp),
                     text = "⬤",
                     color = colors[cat + fileName]!!.value,
                 )
-                if (checkDel.value) {
-                    openEditDialog.value = true
-                    i.value = index
-                    checkDel.value = false
-                }
-
             }
         }
     }
@@ -228,7 +208,7 @@ fun UploadBox(dir: String) {
     Box(
         modifier = Modifier
             .padding(2.dp)
-            .border(4.dp, Color(0xFFB22828),RoundedCornerShape(16.dp))
+            .border(4.dp, Color(0xFFB22828), RoundedCornerShape(16.dp))
             .size(200.dp)
     ) {
         IconButton(
@@ -255,14 +235,13 @@ fun UploadBox(dir: String) {
 
 @ExperimentalFoundationApi
 @Composable
-fun catalogs(cats: String) {
-    val s = cats
+fun Catalogs(cats: String) {
     val context = LocalContext.current
     val imageDirectory = File(
         ContextCompat.getExternalFilesDirs(
             context,
             Environment.DIRECTORY_PICTURES
-        )[0], s
+        )[0], cats
     )
     val directory = File(imageDirectory.toString())
     val files = directory.listFiles()
@@ -274,34 +253,24 @@ fun catalogs(cats: String) {
         if (!files.isNullOrEmpty()) {
             items(files.size + 1) { index ->
                 if (index == files.size) {
-                    UploadBox(s)
+                    UploadBox(cats)
                 } else {
-                    if (showDialog.value) {
-                        ChangeColor(s + files[i.value].name)
-                        showDialog.value = false
-                    }
-                    if (!colors.containsKey(s + files[index].name))
-                        colors[s + files[index].name] =
+                    if (!colors.containsKey(cats + files[index].name))
+                        colors[cats + files[index].name] =
                             remember { mutableStateOf(Color.Green) }
 
-                    if (openEditDialog.value) {
-                        openEditableActivity(files[i.value].name, s)
-                        openEditDialog.value = false
-                    }
-                    ImagesTextBox(files[index].name, index, s)
+                    ImagesTextBox(files[index].name, cats)
                 }
             }
         } else {
             items(1) {
-                UploadBox(s)
+                UploadBox(cats)
             }
         }
     }
 }
 
-@Composable
-fun openEditableActivity(name: String, cat: String) {
-    val context = LocalContext.current
+fun openEditableActivity(context: Context, name: String, cat: String) {
     intent.value = Intent(context, EditPhoto::class.java).apply {
         putExtra("catalog", cat)
         putExtra("name", name)
@@ -314,7 +283,6 @@ fun RequestStoragePermissions(
     onPermissionGranted: () -> Unit,
     onPermissionDenied: () -> Unit
 ) {
-    val context = LocalContext.current
     val permissions = arrayOf(
         Manifest.permission.READ_EXTERNAL_STORAGE,
         Manifest.permission.INTERNET,
@@ -322,8 +290,8 @@ fun RequestStoragePermissions(
     )
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val granted = permissions.all { it.value }
+    ) { p ->
+        val granted = p.all { it.value }
         if (granted) {
             onPermissionGranted()
         } else {
@@ -333,20 +301,6 @@ fun RequestStoragePermissions(
 
     LaunchedEffect(Unit) {
         launcher.launch(permissions)
-    }
-}
-
-
-class PermissionResultCallback(
-    private val onPermissionGranted: (Any?, Any?) -> Unit
-) : ActivityResultCallback<Map<String, Boolean>> {
-
-    override fun onActivityResult(result: Map<String, Boolean>?) {
-        val permissions = result?.keys?.toTypedArray() ?: emptyArray()
-        val grantResults =
-            result?.values?.map { if (it) PackageManager.PERMISSION_GRANTED else PackageManager.PERMISSION_DENIED }
-                ?.toIntArray() ?: IntArray(0)
-        onPermissionGranted(permissions, grantResults)
     }
 }
 
@@ -382,52 +336,49 @@ fun Tabs() {
         }
         when (selectedTabIndex) {
             0 -> {
-                catalogs(tabs[0])
+                Catalogs(tabs[0])
             }
             1 -> {
-                catalogs(tabs[1])
+                Catalogs(tabs[1])
             }
             2 -> {
-                catalogs(tabs[2])
+                Catalogs(tabs[2])
             }
             3 -> {
-                catalogs(tabs[3])
+                Catalogs(tabs[3])
             }
             4 -> {
-                catalogs(tabs[4])
+                Catalogs(tabs[4])
             }
             5 -> {
-                catalogs(tabs[5])
+                Catalogs(tabs[5])
             }
         }
     }
 }
 
 @Composable
-fun saveColors() {
+fun SaveColors() {
     var s = ""
     colors.forEach { (key) ->
         s += "$key="
-        if (colors[key]!!.value == Color.Red)
-            s += "r,,,"
-        else if (colors[key]!!.value == Color.Yellow)
-            s += "y,,,"
-        else
-            s += "b,,,"
+        s += when (colors[key]!!.value) {
+            Color.Red -> "r,,,"
+            Color.Yellow -> "y,,,"
+            else -> "b,,,"
+        }
     }
 //    s = ""
     val file = File(LocalContext.current.filesDir, "data.txt")
     file.writeText(s)
 }
 
-@Composable
-fun ChangeColor(s: String) {
+fun changeColor(s: String) {
     when (colors[s]!!.value) {
         Color.Red -> colors[s]!!.value = Color.Yellow
         Color.Yellow -> colors[s]!!.value = Color.Green
         else -> colors[s]!!.value = Color.Red
     }
-    saveColors()
 }
 
 @ExperimentalFoundationApi

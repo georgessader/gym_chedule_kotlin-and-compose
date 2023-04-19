@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -13,17 +12,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.gymschedule.ui.theme.GymScheduleTheme
 import android.annotation.SuppressLint
 import android.content.ContentValues.TAG
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.os.Environment
 import android.util.Log
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -32,18 +27,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import java.io.File
 import java.io.FileOutputStream
@@ -58,7 +48,7 @@ class EditPhoto : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color(0x44B22828)
                 ) {
-                    Firste()
+                    FirstFun()
                 }
             }
         }
@@ -67,10 +57,10 @@ class EditPhoto : ComponentActivity() {
 
 var directory = intent.value.getStringExtra("catalog")
 var filename = intent.value.getStringExtra("name")
-val bitmapedit = mutableStateOf<Bitmap?>(null)
+val bitmap_edit = mutableStateOf<Bitmap?>(null)
 
 @Composable
-fun getBitmapFromUri(d: String?, n: String?): Bitmap? {
+fun getBitmapFromUri(d: String, n: String): Bitmap? {
     val context = LocalContext.current
     val imageDirectory = File(
         ContextCompat.getExternalFilesDirs(
@@ -80,8 +70,7 @@ fun getBitmapFromUri(d: String?, n: String?): Bitmap? {
     )
     try {
         val file = File(imageDirectory, n)
-        val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
-        return bitmap
+        return BitmapFactory.decodeFile(file.absolutePath)
     } catch (e: Exception) {
         Log.e(TAG, "Error loading bitmap from path", e)
     }
@@ -90,10 +79,10 @@ fun getBitmapFromUri(d: String?, n: String?): Bitmap? {
 
 
 @Composable
-fun DropDownLl(s: String?): String {
+fun dropDownLl(s: String?): String {
     var expanded by remember { mutableStateOf(false) }
     var selectedItem by remember { mutableStateOf(s) }
-    Box(modifier = Modifier.width(200.dp),) {
+    Box(modifier = Modifier.width(200.dp)) {
         TextButton(
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth()
@@ -120,9 +109,7 @@ fun DropDownLl(s: String?): String {
     return selectedItem.toString()
 }
 
-@Composable
-fun deleteFile(od: String?, on: String?) {
-    val context = LocalContext.current
+fun deleteFile(context: Context, od: String, on: String) {
     val imageDirectory = File(
         ContextCompat.getExternalFilesDirs(
             context,
@@ -132,14 +119,11 @@ fun deleteFile(od: String?, on: String?) {
     val file = File(imageDirectory, on)
     file.delete()
     colors.remove(od + on)
-    saveColors()
     context.startActivity(Intent(context, MainActivity::class.java))
 }
 
 @SuppressLint("UnrememberedMutableState")
-@Composable
-fun editFile(od: String?, on: String?, n: String?, catchanged: String) {
-    val context = LocalContext.current
+fun editFile(context: Context, od: String, on: String, n: String, cat_changed: String): String {
     val imageDirectory1 = File(
         ContextCompat.getExternalFilesDirs(
             context,
@@ -147,49 +131,49 @@ fun editFile(od: String?, on: String?, n: String?, catchanged: String) {
         )[0], od
     )
 
-    var ename by remember { mutableStateOf(n) }
+    val ename by mutableStateOf(n)
+    var result by mutableStateOf("")
     if (ename != "") {
-        val context = LocalContext.current
         val imageDirectory = File(
             ContextCompat.getExternalFilesDirs(
                 context,
                 Environment.DIRECTORY_PICTURES
-            )[0], catchanged
+            )[0], cat_changed
         )
         if (!imageDirectory.exists()) {
             imageDirectory.mkdir()
         }
-        var imageFile = File(imageDirectory, "$ename.jpg")
+        val imageFile = File(imageDirectory, "$ename.jpg")
         if (!imageFile.exists()) {
             imageFile.createNewFile()
         }
         val outputStream = FileOutputStream(imageFile)
-        bitmapedit.value!!.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+        bitmap_edit.value!!.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
         outputStream.flush()
         outputStream.close()
 
         val file1 = File(imageDirectory1, on)
         file1.delete()
 
-        colors["$catchanged$n.jpg"] = mutableStateOf(colors[od + on]!!.value)
+        colors["$cat_changed$n.jpg"] = mutableStateOf(colors[od + on]!!.value)
         colors.remove(od + on)
-        saveColors()
         context.startActivity(Intent(context, MainActivity::class.java))
     } else {
-        Text(text = "Empty Exercise name")
+        result = "Empty Exercise name"
     }
+    return result
 }
 
 @Composable
-fun Firste() {
+fun FirstFun() {
     directory = intent.value.getStringExtra("catalog")
     filename = intent.value.getStringExtra("name")
-    bitmapedit.value = getBitmapFromUri(directory, filename)
-    var change = remember { mutableStateOf<Boolean>(false) }
-    var delete = remember { mutableStateOf<Boolean>(false) }
+    bitmap_edit.value = getBitmapFromUri(directory.toString(), filename.toString())
     var ename by remember { mutableStateOf(filename) }
 
-    var up = remember { mutableStateOf<Boolean>(false) }
+    val context = LocalContext.current
+
+    var s by remember { mutableStateOf("") }
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -202,7 +186,7 @@ fun Firste() {
                 shape = RoundedCornerShape(8.dp),
                 elevation = 8.dp
             ) {
-                bitmapedit.value?.let {
+                bitmap_edit.value?.let {
                     Image(
                         bitmap = it.asImageBitmap(),
                         contentDescription = null,
@@ -214,7 +198,7 @@ fun Firste() {
                 }
             }
         }
-        var changedCat = DropDownLl(directory)
+        val changedCat = dropDownLl(directory)
         TextField(
             value = ename.toString().replace(".jpg", ""),
             onValueChange = { ename = it },
@@ -227,7 +211,10 @@ fun Firste() {
         {
             IconButton(
                 onClick = {
-                    change.value = true
+                    s = editFile(
+                        context, directory.toString(), filename.toString(),
+                        ename.toString(), changedCat
+                    )
                 }
             ) {
                 Icon(
@@ -241,7 +228,7 @@ fun Firste() {
             }
             IconButton(
                 onClick = {
-                    delete.value = true
+                    deleteFile(context, directory.toString(), filename.toString())
                 }
             ) {
                 Icon(
@@ -253,16 +240,9 @@ fun Firste() {
                         .padding(8.dp)
                 )
             }
-
         }
-        if (change.value) {
-            editFile(directory, filename, ename, changedCat)
-            change.value = false
-        }
-        if (delete.value) {
-            deleteFile(directory, filename)
-            delete.value = false
-        }
+        Text(text = s)
+        SaveColors()
     }
 }
 
@@ -271,6 +251,6 @@ fun Firste() {
 @Composable
 fun DefaultPreview3() {
     GymScheduleTheme {
-        Firste()
+        FirstFun()
     }
 }

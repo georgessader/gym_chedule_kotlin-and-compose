@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -12,10 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.gymschedule.ui.theme.GymScheduleTheme
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.app.Activity.RESULT_OK
-import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
@@ -25,11 +20,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
-import androidx.activity.result.ActivityResultCallback
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,9 +30,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,7 +40,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider.getUriForFile
 import java.io.File
 import java.io.FileOutputStream
 
@@ -75,49 +63,6 @@ class UploadPhoto : ComponentActivity() {
 val bitmap = mutableStateOf<Bitmap?>(null)
 var direc = intent.value.getStringExtra("catalog")
 
-fun getImageUri(context: Context): Uri {
-    // 1
-    val directory = File(context.cacheDir, "images")
-    directory.mkdirs()
-    // 2
-    val file = File.createTempFile(
-        "selected_image_",
-        ".jpg",
-        directory
-    )
-    // 3
-    val authority = context.packageName + ".fileprovider"
-    // 4
-    return getUriForFile(
-        context,
-        authority,
-        file,
-    )
-}
-
-//var cam_uri: Uri? = null
-
-fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-    if (resultCode == Activity.RESULT_OK) {
-        val photoUri = data?.data
-        if (photoUri != null) {
-            Log.d("sss", "sssssss")
-        }
-    }
-}
-
-@Composable
-fun CameraCapture(onImageCaptured: (Uri) -> Unit) {
-    val context = LocalContext.current
-    LaunchedEffect(true) {
-        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        var imageFile = File("test.jpg")
-        val photoUri = imageFile.createNewFile()
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
-        val activity = context
-        activity?.startActivity(intent)
-    }
-}
 
 
 @SuppressLint("UnrememberedMutableState")
@@ -132,7 +77,6 @@ fun ImagePicker() {
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         imageUri = uri
-        Log.d("dddddd", imageUri.toString())
     }
 
     imageUri?.let {
@@ -146,11 +90,10 @@ fun ImagePicker() {
             bitmap.value = ImageDecoder.decodeBitmap(source)
         }
     }
-    var openCam = remember { mutableStateOf<Boolean>(false) }
+    val openCam = remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier.padding(16.dp),
-        //horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = Icons.Outlined.Home,
@@ -180,7 +123,7 @@ fun ImagePicker() {
 }
 
 @Composable
-fun DropDownL(): String {
+fun dropDownL(): String {
     var expanded by remember { mutableStateOf(false) }
     var selectedItem by remember { mutableStateOf(direc) }
     Box(modifier = Modifier.width(200.dp)) {
@@ -213,7 +156,7 @@ fun DropDownL(): String {
 @Composable
 fun First() {
     direc = intent.value.getStringExtra("catalog")
-    var up = remember { mutableStateOf<Boolean>(false) }
+    val up = remember { mutableStateOf(false) }
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -246,8 +189,10 @@ fun First() {
         }
 
         ImagePicker()
-        val s: String = DropDownL()
+        val context = LocalContext.current
+        val s: String = dropDownL()
         var ename by remember { mutableStateOf("") }
+        var result by remember { mutableStateOf("") }
         TextField(
             value = ename,
             onValueChange = { ename = it },
@@ -258,52 +203,49 @@ fun First() {
         )
         Button(
             onClick = {
-                up.value = true
+                if (bitmap.value != null && ename != "") {
+                    val imageDirectory = File(
+                        ContextCompat.getExternalFilesDirs(
+                            context,
+                            Environment.DIRECTORY_PICTURES
+                        )[0], s
+                    )
+                    if (!imageDirectory.exists()) {
+                        imageDirectory.mkdir()
+                    }
+                    var imageFile = File(imageDirectory, "$ename.jpg")
+                    if (!imageFile.exists()) {
+                        imageFile.createNewFile()
+                    } else {
+                        var c = 1
+                        while (imageFile.exists()) {
+                            imageFile = File(imageDirectory, "$ename $c.jpg")
+                            if (!imageFile.exists()) {
+                                imageFile.createNewFile()
+                                break
+                            }
+                            c++
+                        }
+
+                    }
+                    val outputStream = FileOutputStream(imageFile)
+                    bitmap.value!!.compress(Bitmap.CompressFormat.JPEG, 10, outputStream)
+                    outputStream.flush()
+                    outputStream.close()
+                    up.value = false
+                    context.startActivity(Intent(context, MainActivity::class.java))
+                } else {
+                    result = if (bitmap.value == null)
+                        "No Photo"
+                    else
+                        "Empty Exercise name"
+                }
             },
             modifier = Modifier.padding(vertical = 8.dp)
         ) {
             Text(text = "Add")
         }
-        if (up.value) {
-            if (bitmap.value != null && ename != "") {
-                val context = LocalContext.current
-                val imageDirectory = File(
-                    ContextCompat.getExternalFilesDirs(
-                        context,
-                        Environment.DIRECTORY_PICTURES
-                    )[0], s
-                )
-                if (!imageDirectory.exists()) {
-                    imageDirectory.mkdir()
-                }
-                var imageFile = File(imageDirectory, "$ename.jpg")
-                if (!imageFile.exists()) {
-                    imageFile.createNewFile()
-                } else {
-                    var c = 1
-                    while (imageFile.exists()) {
-                        imageFile = File(imageDirectory, "$ename $c.jpg")
-                        if (!imageFile.exists()) {
-                            imageFile.createNewFile()
-                            break
-                        }
-                        c++
-                    }
-
-                }
-                val outputStream = FileOutputStream(imageFile)
-                bitmap.value!!.compress(Bitmap.CompressFormat.JPEG, 10, outputStream)
-                outputStream.flush()
-                outputStream.close()
-                up.value = false
-                context.startActivity(Intent(context, MainActivity::class.java))
-            } else {
-                if (bitmap.value == null)
-                    Text(text = "No Photo")
-                else
-                    Text(text = "Empty Exercise name")
-            }
-        }
+        Text(text = result)
     }
 }
 
