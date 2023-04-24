@@ -1,13 +1,10 @@
 package com.example.gymschedule
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.app.Instrumentation
-import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
+import android.media.Image
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -17,21 +14,13 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,21 +30,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.content.ContextCompat
 import com.example.gymschedule.ui.theme.GymScheduleTheme
 import java.io.File
 import java.io.FileOutputStream
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.launch
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.Button
 import androidx.compose.material.Text
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.input.pointer.pointerInput
 
 
 class UploadPhoto : ComponentActivity() {
@@ -82,7 +74,6 @@ var direc = intent.value.getStringExtra("catalog")
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun ImagePicker() {
-    var openCam = remember { mutableStateOf(false) }
     var imageUri by remember {
         mutableStateOf<Uri?>(null)
     }
@@ -106,37 +97,41 @@ fun ImagePicker() {
         }
     }
 
+
     val result = remember { mutableStateOf<Bitmap?>(null) }
-    val launcherr = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) {
-        result.value = it
-    }
+    val launcherr =
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) {
+            result.value = it
+        }
 
 
     Row(
         modifier = Modifier.padding(16.dp),
     ) {
         Icon(
-            imageVector = Icons.Outlined.Home,
-            contentDescription = "Edit",
+            imageVector = Icons.Default.Image,
+            contentDescription = "Upload",
             tint = Color(0xFFB22828),
             modifier = Modifier
                 .padding(5.dp)
-                .size(25.dp)
+                .padding(horizontal = 10.dp)
+                .size(40.dp)
                 .clickable { launcher.launch("image/*") }
         )
         Icon(
-            Icons.Rounded.ShoppingCart,
-            contentDescription = "Edit",
+            imageVector = Icons.Default.CameraAlt,
+            contentDescription = "Camera",
             tint = Color(0xFFB22828),
             modifier = Modifier
                 .padding(5.dp)
-                .size(25.dp)
+                .padding(horizontal = 10.dp)
+                .size(40.dp)
                 .clickable {
                     launcherr.launch()
                 }
         )
         result.value?.let { image ->
-            bitmap.value=image
+            bitmap.value = image
         }
     }
 }
@@ -176,7 +171,8 @@ fun dropDownL(): String {
 @Composable
 fun First() {
     direc = intent.value.getStringExtra("catalog")
-    val up = remember { mutableStateOf(false) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var zoom by remember { mutableStateOf(1f) }
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -184,7 +180,8 @@ fun First() {
         if (bitmap.value != null) {
             Box(
                 modifier = Modifier
-                    .size(250.dp)
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.5f)
                     .padding(6.dp)
 
             ) {
@@ -193,6 +190,8 @@ fun First() {
                     shape = RoundedCornerShape(8.dp),
                     elevation = 8.dp
                 ) {
+                    val maxZoom = 5f
+                    val minZoom = 0.2f
                     bitmap.value?.let {
                         Image(
                             bitmap = it.asImageBitmap(),
@@ -201,9 +200,25 @@ fun First() {
                                 .fillMaxSize()
                                 .background(Color(0xFFB22828))
                                 .padding(6.dp)
-                                .height(120.dp)
+                                .width(300.dp)
+                                .height(300.dp)
+                                .pointerInput(Unit) {
+                                    detectTransformGestures { _, c, zoomAmount, _ ->
+                                        zoom *= zoomAmount
+                                        offset += c
+                                        zoom = zoom.coerceIn(minZoom, maxZoom)
+                                    }
+                                }
+                                .graphicsLayer(
+                                    scaleX = zoom,
+                                    scaleY = zoom,
+                                    translationX = offset.x,
+                                    translationY = offset.y,
+                                )
                         )
+//                        SavePosition()
                     }
+//                    Log.d("dddddddddddddddddddddd", "$zoom ,,,, $offset")
                 }
             }
         }
@@ -249,11 +264,17 @@ fun First() {
 
                     }
                     val outputStream = FileOutputStream(imageFile)
-                    bitmap.value!!.compress(Bitmap.CompressFormat.JPEG, 50, outputStream)
+                    bitmap.value!!.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                     outputStream.flush()
                     outputStream.close()
-                    up.value = false
-                    context.startActivity(Intent(context, MainActivity::class.java))
+
+                    intent.value = Intent(context, MainActivity::class.java).apply {
+                        putExtra("mode","addpos")
+                        putExtra("dirfname", s+ename)
+                        putExtra("value", "$zoom and ${offset.x},${offset.y}")
+                    }
+                    context.startActivity(intent.value)
+
                 } else {
                     result = if (bitmap.value == null)
                         "No Photo"
@@ -266,8 +287,17 @@ fun First() {
             Text(text = "Add")
         }
         Text(text = result)
+//        SavePosition()
     }
 }
+
+//@Composable
+//fun createBitmapFromImage(image: Image): Bitmap {
+//    val bitmapPainter =
+//        image as? BitmapPainter ?: image.asImageBitmap().asAndroidBitmap().let(::BitmapPainter)
+//    return bitmapPainter.bitmap
+//}
+
 
 @Preview(showBackground = true)
 @Composable

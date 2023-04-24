@@ -29,11 +29,15 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,8 +69,11 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                     if (granted.value) {
+//                        clearData()
                         LoadData()
+                        LoadDataPos()
                         Tabs()
+                        todoIntent()
                     }
                 }
             }
@@ -76,9 +83,56 @@ class MainActivity : ComponentActivity() {
 
 val granted = mutableStateOf(false)
 var colors = mapOf("Test" to mutableStateOf(Color.Green)).toMutableMap()
+var position = mapOf("Test" to mutableStateOf("")).toMutableMap()
 var selectedTabIndex by mutableStateOf(0)
 var intent = mutableStateOf(Intent())
+var mode = ""
 
+
+@Composable
+fun todoIntent() {
+    mode = intent.value.getStringExtra("mode").toString()
+    if (mode != "") {
+        if (mode == "addpos") {
+            val dirfname = intent.value.getStringExtra("dirfname")
+            val vall = intent.value.getStringExtra("value")
+            dirfname?.let {
+                position[dirfname] = mutableStateOf(vall.toString())
+                SavePosition()
+                intent.value.removeExtra("dirfname")
+                intent.value.removeExtra("value")
+            }
+        } else if (mode == "editpos") {
+            val odirfname = intent.value.getStringExtra("odirfname")
+            val ndirfname = intent.value.getStringExtra("ndirfname")
+            val vall = intent.value.getStringExtra("value")
+            Log.d("tttttttt", ndirfname.toString())
+            ndirfname?.let {
+                position.remove(odirfname.toString().replace(".jpg", ""))
+                position[ndirfname] = mutableStateOf(vall.toString())
+                SavePosition()
+
+
+                colors["$ndirfname.jpg"] = mutableStateOf(colors[odirfname.toString()]?.value ?: Color.Green)
+                if(odirfname!="$ndirfname.jpg")
+                {
+                    colors.remove(odirfname)
+                }
+
+                SaveColors()
+                intent.value.removeExtra("odirfname")
+                intent.value.removeExtra("ndirfname")
+                intent.value.removeExtra("value")
+            }
+        } else if (mode == "deletepos") {
+            val dirfname = intent.value.getStringExtra("dirfname")
+            position.remove(dirfname!!.replace(".jpg", ""))
+            colors.remove(dirfname)
+            SaveColors()
+            SavePosition()
+        }
+    }
+}
 
 @SuppressLint("UnrememberedMutableState")
 @Composable
@@ -103,7 +157,29 @@ fun LoadData() {
             Log.d("Output data: ", colors.toString())
         }
     }
+}
 
+@SuppressLint("UnrememberedMutableState")
+@Composable
+fun LoadDataPos() {
+    val f = File(LocalContext.current.filesDir, "posdata.txt")
+    if (f.exists()) {
+        Log.d("dddddddd", "1")
+        val br = BufferedReader(FileReader(f))
+        val s: String
+        if (br.readLine() != null) {
+            val f = File(LocalContext.current.filesDir, "posdata.txt")
+            s = f.readLines()[0]
+            val map = s.split(",,,")
+            for (i in 0 until map.count()) {
+                if (map[i].contains("=")) {
+                    val ss = map[i].split("=")
+                    position[ss[0]] = mutableStateOf(ss[1])
+                }
+            }
+            Log.d("Output dataaaaa: ", position.toString())
+        }
+    }
 }
 
 @Composable
@@ -123,81 +199,116 @@ fun ImageFromFile(filePath: String, s: String) {
     } else {
         ColorPainter(color = Color.Red)
     }
-    Image(
-        painter = painter,
+    var zoom = 1.0f
+    var offsetx = 0.0f
+    var offsety = 0.0f
+    val filep = s + filePath.replace(".jpg", "")
+    if (position.containsKey(filep)) {
+        zoom = position[filep]!!.value.split(" and ")[0].toFloat()
+        offsetx = position[filep]!!.value.split(" and ")[1].split(",")[0].toFloat()
+        offsety = position[filep]!!.value.split(" and ")[1].split(",")[1].toFloat()
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.7f)
             .padding(6.dp)
-            .clickable {
-                val st = s + filePath
-                changeColor(st)
-            },
-        alignment = Alignment.Center,
-        contentDescription = ""
-    )
+
+    ) {
+        Card(
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(8.dp),
+            elevation = 8.dp
+        ) {
+            Image(
+                painter = painter,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFB22828))
+                    .padding(6.dp)
+                    .width(100.dp)
+                    .height(100.dp)
+                    .graphicsLayer(
+                        scaleX = zoom * 1.1f,
+                        scaleY = zoom * 1.1f,
+                        translationX = offsetx / 3,
+                        translationY = offsety / 3
+                    )
+                    .clickable {
+                        val st = s + filePath
+                        changeColor(st)
+                    },
+                alignment = Alignment.Center,
+                contentDescription = ""
+            )
+        }
+    }
 }
+
 
 @ExperimentalFoundationApi
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun ImagesTextBox(fileName: String, cat: String) {
-    val cont= LocalContext.current
+    val cont = LocalContext.current
     Box(
         modifier = Modifier
             .padding(2.dp)
-            .background(Color(0xFFB22828), RoundedCornerShape(16.dp))
-            .size(200.dp),
+            .background(Color(0xFFB22828), RoundedCornerShape(16.dp)),
 
         ) {
         SaveColors()
-        ImageFromFile(fileName, cat)
         Column(
             verticalArrangement = Arrangement.Top,
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.3f)
-                .background(Color(0xFFB22828), RoundedCornerShape(16.dp))
                 .alpha(0.9f)
-                .padding(4.dp)
-                .align(Alignment.BottomStart)
-        ) {
-            Text(
-                text = fileName.replace(".jpg", ""),
-                textAlign = TextAlign.Center,
-                color = Color.White,
-                fontSize = 10.sp,
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Divider(
-                color = Color.White,
-                thickness = 1.dp
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-            )
-            {
-                Icon(
-                    imageVector = Icons.Outlined.Edit,
-                    contentDescription = "Edit",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .padding(5.dp)
-                        .size(25.dp)
-                        .clickable {
-                            openEditableActivity(cont,fileName, cat)
-                        }
-                )
+        )
+        {
+            ImageFromFile(fileName, cat)
+            Column(
+                verticalArrangement = Arrangement.Top,
+                modifier = Modifier
+                    .background(Color(0xFFB22828), RoundedCornerShape(16.dp))
+//                    .align(Alignment.BottomStart)
+            ) {
                 Text(
-                    modifier = Modifier
-                        .padding(horizontal = 10.dp),
-                    text = "⬤",
-                    color = colors[cat + fileName]!!.value,
+                    text = fileName.replace(".jpg", ""),
+                    textAlign = TextAlign.Center,
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+                Divider(
+                    color = Color.White,
+                    thickness = 1.dp
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                )
+                {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = "Edit",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .padding(5.dp)
+                            .size(25.dp)
+                            .clickable {
+                                openEditableActivity(cont, fileName, cat)
+                            }
+                    )
+                    Text(
+                        modifier = Modifier
+                            .padding(horizontal = 10.dp),
+                        text = "⬤",
+                        color = colors[cat + fileName]!!.value,
+                    )
+                }
             }
+
         }
     }
 }
@@ -209,7 +320,7 @@ fun UploadBox(dir: String) {
         modifier = Modifier
             .padding(2.dp)
             .border(4.dp, Color(0xFFB22828), RoundedCornerShape(16.dp))
-            .size(200.dp)
+            .size(180.dp)
     ) {
         IconButton(
             modifier = Modifier
@@ -268,6 +379,10 @@ fun Catalogs(cats: String) {
             }
         }
     }
+//    Divider()
+//    Text(colors.keys.toString())
+//    Divider()
+//    Text(position.keys.toString())
 }
 
 fun openEditableActivity(context: Context, name: String, cat: String) {
@@ -358,6 +473,19 @@ fun Tabs() {
 }
 
 @Composable
+fun SavePosition() {
+    var s = ""
+    position.forEach { (key) ->
+        s += "$key="
+        s += position[key]!!.value + ",,,"
+    }
+//    s = ""
+    val file = File(LocalContext.current.filesDir, "posdata.txt")
+    file.writeText(s)
+}
+
+
+@Composable
 fun SaveColors() {
     var s = ""
     colors.forEach { (key) ->
@@ -371,6 +499,15 @@ fun SaveColors() {
 //    s = ""
     val file = File(LocalContext.current.filesDir, "data.txt")
     file.writeText(s)
+}
+
+@Composable
+fun clearData() {
+    var s = ""
+    val file = File(LocalContext.current.filesDir, "data.txt")
+    file.writeText(s)
+    val fil = File(LocalContext.current.filesDir, "posdata.txt")
+    fil.writeText(s)
 }
 
 fun changeColor(s: String) {

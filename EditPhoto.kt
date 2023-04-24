@@ -19,6 +19,8 @@ import android.graphics.BitmapFactory
 import android.os.Environment
 import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,8 +31,11 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -48,7 +53,9 @@ class EditPhoto : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color(0x44B22828)
                 ) {
+                    setVal()
                     FirstFun()
+                    setVal()
                 }
             }
         }
@@ -58,6 +65,27 @@ class EditPhoto : ComponentActivity() {
 var directory = intent.value.getStringExtra("catalog")
 var filename = intent.value.getStringExtra("name")
 val bitmap_edit = mutableStateOf<Bitmap?>(null)
+var offset = mutableStateOf(Offset.Zero)
+var offsetx = 0.0f
+var offsety = 0.0f
+var zoom = mutableStateOf(1f)
+
+fun setVal()
+{
+    zoom.value=1f
+    offsetx = 0.0f
+    offsety = 0.0f
+    offset.value = Offset.Zero
+    val fp = directory + filename
+    val filep = fp.replace(".jpg", "")
+    if (position.containsKey(filep)) {
+        zoom.value = position[filep]!!.value.split(" and ")[0].toFloat()
+        offsetx = position[filep]!!.value.split(" and ")[1].split(",")[0].toFloat()
+        offsety = position[filep]!!.value.split(" and ")[1].split(",")[1].toFloat()
+        offset.value = Offset(offsetx, offsety)
+    }
+}
+
 
 @Composable
 fun getBitmapFromUri(d: String, n: String): Bitmap? {
@@ -119,11 +147,26 @@ fun deleteFile(context: Context, od: String, on: String) {
     val file = File(imageDirectory, on)
     file.delete()
     colors.remove(od + on)
-    context.startActivity(Intent(context, MainActivity::class.java))
+
+    intent.value = Intent(context, MainActivity::class.java).apply {
+        putExtra("mode", "deletepos")
+        putExtra("dirfname", od + on)
+    }
+    context.startActivity(intent.value)
+
+//    context.startActivity(Intent(context, MainActivity::class.java))
 }
 
 @SuppressLint("UnrememberedMutableState")
-fun editFile(context: Context, od: String, on: String, n: String, cat_changed: String): String {
+fun editFile(
+    context: Context,
+    od: String,
+    on: String,
+    n: String,
+    cat_changed: String,
+    zoom: Float,
+    offset: Offset
+): String {
     val imageDirectory1 = File(
         ContextCompat.getExternalFilesDirs(
             context,
@@ -143,6 +186,10 @@ fun editFile(context: Context, od: String, on: String, n: String, cat_changed: S
         if (!imageDirectory.exists()) {
             imageDirectory.mkdir()
         }
+
+        val file1 = File(imageDirectory1, on)
+        file1.delete()
+
         val imageFile = File(imageDirectory, "$ename.jpg")
         if (!imageFile.exists()) {
             imageFile.createNewFile()
@@ -152,12 +199,24 @@ fun editFile(context: Context, od: String, on: String, n: String, cat_changed: S
         outputStream.flush()
         outputStream.close()
 
-        val file1 = File(imageDirectory1, on)
-        file1.delete()
 
-        colors["$cat_changed$n.jpg"] = mutableStateOf(colors[od + on]!!.value)
-        colors.remove(od + on)
-        context.startActivity(Intent(context, MainActivity::class.java))
+
+//        position[cat_changed+n] = mutableStateOf("$zoom and ${offset.x},${offset.y}")
+
+
+        intent.value = Intent(context, MainActivity::class.java).apply {
+            putExtra("mode", "editpos")
+            putExtra("odirfname", od + on)
+            putExtra("ndirfname", cat_changed + n)
+            putExtra("value", "$zoom and ${offset.x},${offset.y}")
+        }
+        context.startActivity(intent.value)
+//        SavePosition()
+
+//        position["$cat_changed$n.jpg"] = mutableStateOf(position[od + on]!!.value)
+//        position.remove(od + on)
+
+//        context.startActivity(Intent(context, MainActivity::class.java))
     } else {
         result = "Empty Exercise name"
     }
@@ -174,33 +233,58 @@ fun FirstFun() {
     val context = LocalContext.current
 
     var s by remember { mutableStateOf("") }
+
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier.size(250.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.5f)
+                .padding(6.dp)
         ) {
             Card(
                 modifier = Modifier.fillMaxSize(),
                 shape = RoundedCornerShape(8.dp),
                 elevation = 8.dp
             ) {
+                val maxZoom = 5f
+                val minZoom = 0.2f
                 bitmap_edit.value?.let {
                     Image(
                         bitmap = it.asImageBitmap(),
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
+                            .background(Color(0xFFB22828))
                             .padding(6.dp)
-                            .height(120.dp)
+                            .width(300.dp)
+                            .height(300.dp)
+                            .pointerInput(Unit) {
+                                detectTransformGestures { _, c, zoomAmount, _ ->
+                                    zoom.value *= zoomAmount
+                                    offset.value += c
+//                                    offsetx=c.x
+//                                    offsety=c.y
+                                    zoom.value = zoom.value.coerceIn(minZoom, maxZoom)
+                                }
+                            }
+                            .graphicsLayer(
+                                scaleX = zoom.value,
+                                scaleY = zoom.value,
+                                translationX = offset.value.x,
+                                translationY = offset.value.y,
+                            )
                     )
                 }
             }
         }
         val changedCat = dropDownLl(directory)
+        ename = ename.toString().replace(".jpg", "")
         TextField(
-            value = ename.toString().replace(".jpg", ""),
+            value = ename.toString(),
             onValueChange = { ename = it },
             label = { Text("Exercise name") },
             keyboardOptions = KeyboardOptions.Default.copy(
@@ -213,7 +297,7 @@ fun FirstFun() {
                 onClick = {
                     s = editFile(
                         context, directory.toString(), filename.toString(),
-                        ename.toString(), changedCat
+                        ename.toString(), changedCat, zoom.value, offset.value
                     )
                 }
             ) {
@@ -242,7 +326,6 @@ fun FirstFun() {
             }
         }
         Text(text = s)
-        SaveColors()
     }
 }
 
