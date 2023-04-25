@@ -15,7 +15,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
@@ -29,28 +28,27 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import androidx.core.content.ContextCompat
+import com.google.accompanist.pager.*
+import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
 
 
 class MainActivity : ComponentActivity() {
-    @ExperimentalFoundationApi
+
+    @OptIn(ExperimentalPagerApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -70,10 +68,11 @@ class MainActivity : ComponentActivity() {
                     )
                     if (granted.value) {
 //                        clearData()
+                        TodoIntent()
                         LoadData()
                         LoadDataPos()
-                        Tabs()
-                        todoIntent()
+//                        Tabs()
+                        TabLayout()
                     }
                 }
             }
@@ -84,13 +83,84 @@ class MainActivity : ComponentActivity() {
 val granted = mutableStateOf(false)
 var colors = mapOf("Test" to mutableStateOf(Color.Green)).toMutableMap()
 var position = mapOf("Test" to mutableStateOf("")).toMutableMap()
-var selectedTabIndex by mutableStateOf(0)
 var intent = mutableStateOf(Intent())
 var mode = ""
+val tabs = listOf("Chest", "Biceps", "Triceps", "Shoulder", "Back", "Legs")
+var extDir=""
+
+
+@OptIn(ExperimentalUnitApi::class)
+@ExperimentalPagerApi
+@Composable
+fun TabLayout() {
+    val pagerState = rememberPagerState(0)
+    Column{
+        Tabs(pagerState = pagerState)
+        TabsContent(pagerState = pagerState)
+    }
+}
+
+
+@ExperimentalPagerApi
+@Composable
+fun Tabs(pagerState: PagerState) {
+    val scope = rememberCoroutineScope()
+    ScrollableTabRow(
+        edgePadding = 0.dp,
+        selectedTabIndex = pagerState.currentPage,
+        indicator = { tabPositions ->
+            TabRowDefaults.Indicator(
+                Modifier.pagerTabIndicatorOffset(pagerState, tabPositions),
+            )
+        }
+    ) {
+        tabs.forEachIndexed { index, _ ->
+            Tab(
+//                icon = {
+//                    Icon(imageVector = list[index].second, contentDescription = null)
+//                },
+                text = {
+                    Text(
+                        tabs[index],
+                        color = if (pagerState.currentPage == index) Color.White else Color.LightGray
+                    )
+                },
+                selected = pagerState.currentPage == index,
+                onClick = {
+                    scope.launch {
+                        pagerState.animateScrollToPage(index)
+                    }
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@ExperimentalPagerApi
+@Composable
+fun TabsContent(pagerState: PagerState) {
+    val context = LocalContext.current
+    HorizontalPager(
+        count = tabs.count(),
+        state = pagerState
+    ) { page ->
+        Catalogs(context, tabs[page])
+    }
+}
+
+
 
 
 @Composable
-fun todoIntent() {
+fun TodoIntent() {
+    val context= LocalContext.current
+    extDir=ContextCompat.getExternalFilesDirs(
+        context,
+        Environment.DIRECTORY_PICTURES
+    )[0].toString()
+
+
     mode = intent.value.getStringExtra("mode").toString()
     if (mode != "") {
         if (mode == "addpos") {
@@ -106,16 +176,15 @@ fun todoIntent() {
             val odirfname = intent.value.getStringExtra("odirfname")
             val ndirfname = intent.value.getStringExtra("ndirfname")
             val vall = intent.value.getStringExtra("value")
-            Log.d("tttttttt", ndirfname.toString())
             ndirfname?.let {
                 position.remove(odirfname.toString().replace(".jpg", ""))
                 position[ndirfname] = mutableStateOf(vall.toString())
                 SavePosition()
 
 
-                colors["$ndirfname.jpg"] = mutableStateOf(colors[odirfname.toString()]?.value ?: Color.Green)
-                if(odirfname!="$ndirfname.jpg")
-                {
+                colors["$ndirfname.jpg"] =
+                    mutableStateOf(colors[odirfname.toString()]?.value ?: Color.Green)
+                if (odirfname != "$ndirfname.jpg") {
                     colors.remove(odirfname)
                 }
 
@@ -154,7 +223,6 @@ fun LoadData() {
                     }
                 }
             }
-            Log.d("Output data: ", colors.toString())
         }
     }
 }
@@ -164,11 +232,9 @@ fun LoadData() {
 fun LoadDataPos() {
     val f = File(LocalContext.current.filesDir, "posdata.txt")
     if (f.exists()) {
-        Log.d("dddddddd", "1")
         val br = BufferedReader(FileReader(f))
         val s: String
         if (br.readLine() != null) {
-            val f = File(LocalContext.current.filesDir, "posdata.txt")
             s = f.readLines()[0]
             val map = s.split(",,,")
             for (i in 0 until map.count()) {
@@ -177,21 +243,12 @@ fun LoadDataPos() {
                     position[ss[0]] = mutableStateOf(ss[1])
                 }
             }
-            Log.d("Output dataaaaa: ", position.toString())
         }
     }
 }
 
 @Composable
-fun ImageFromFile(filePath: String, s: String) {
-    val context = LocalContext.current
-    val imageDirectory = File(
-        ContextCompat.getExternalFilesDirs(
-            context,
-            Environment.DIRECTORY_PICTURES
-        )[0], s
-    )
-    val file = File(imageDirectory, filePath)
+fun ImageFromFile(file: File, s: String) {
     val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
 
     val painter: Painter = if (bitmap != null) {
@@ -202,11 +259,11 @@ fun ImageFromFile(filePath: String, s: String) {
     var zoom = 1.0f
     var offsetx = 0.0f
     var offsety = 0.0f
-    val filep = s + filePath.replace(".jpg", "")
-    if (position.containsKey(filep)) {
-        zoom = position[filep]!!.value.split(" and ")[0].toFloat()
-        offsetx = position[filep]!!.value.split(" and ")[1].split(",")[0].toFloat()
-        offsety = position[filep]!!.value.split(" and ")[1].split(",")[1].toFloat()
+    val filekey = s + file.name.replace(".jpg", "")
+    if (position.containsKey(filekey)) {
+        zoom = position[filekey]!!.value.split(" and ")[0].toFloat()
+        offsetx = position[filekey]!!.value.split(" and ")[1].split(",")[0].toFloat()
+        offsety = position[filekey]!!.value.split(" and ")[1].split(",")[1].toFloat()
     }
 
     Box(
@@ -229,13 +286,13 @@ fun ImageFromFile(filePath: String, s: String) {
                     .width(100.dp)
                     .height(100.dp)
                     .graphicsLayer(
-                        scaleX = zoom * 1.1f,
-                        scaleY = zoom * 1.1f,
-                        translationX = offsetx / 3,
-                        translationY = offsety / 3
+                        scaleX = zoom * 1.05f,
+                        scaleY = zoom * 1.05f,
+                        translationX = offsetx / 3.6f,
+                        translationY = offsety / 3.6f
                     )
                     .clickable {
-                        val st = s + filePath
+                        val st = s + file.name
                         changeColor(st)
                     },
                 alignment = Alignment.Center,
@@ -249,22 +306,20 @@ fun ImageFromFile(filePath: String, s: String) {
 @ExperimentalFoundationApi
 @SuppressLint("UnrememberedMutableState")
 @Composable
-fun ImagesTextBox(fileName: String, cat: String) {
-    val cont = LocalContext.current
+fun ImagesTextBox(cont: Context, file: File, cat: String) {
     Box(
         modifier = Modifier
             .padding(2.dp)
             .background(Color(0xFFB22828), RoundedCornerShape(16.dp)),
-
-        ) {
-        SaveColors()
+    ) {
+//        SaveColors()
         Column(
             verticalArrangement = Arrangement.Top,
             modifier = Modifier
                 .alpha(0.9f)
         )
         {
-            ImageFromFile(fileName, cat)
+            ImageFromFile(file, cat)
             Column(
                 verticalArrangement = Arrangement.Top,
                 modifier = Modifier
@@ -272,7 +327,7 @@ fun ImagesTextBox(fileName: String, cat: String) {
 //                    .align(Alignment.BottomStart)
             ) {
                 Text(
-                    text = fileName.replace(".jpg", ""),
+                    text = file.name.replace(".jpg", ""),
                     textAlign = TextAlign.Center,
                     color = Color.White,
                     fontSize = 10.sp,
@@ -297,14 +352,14 @@ fun ImagesTextBox(fileName: String, cat: String) {
                             .padding(5.dp)
                             .size(25.dp)
                             .clickable {
-                                openEditableActivity(cont, fileName, cat)
+                                openEditableActivity(cont, file.name, cat)
                             }
                     )
                     Text(
                         modifier = Modifier
                             .padding(horizontal = 10.dp),
                         text = "⬤",
-                        color = colors[cat + fileName]!!.value,
+                        color = colors[cat + file.name]!!.value,
                     )
                 }
             }
@@ -346,15 +401,9 @@ fun UploadBox(dir: String) {
 
 @ExperimentalFoundationApi
 @Composable
-fun Catalogs(cats: String) {
-    val context = LocalContext.current
-    val imageDirectory = File(
-        ContextCompat.getExternalFilesDirs(
-            context,
-            Environment.DIRECTORY_PICTURES
-        )[0], cats
-    )
-    val directory = File(imageDirectory.toString())
+fun Catalogs(context: Context, cats: String) {
+
+    val directory = File(extDir,cats)
     val files = directory.listFiles()
 
     LazyVerticalGrid(
@@ -370,7 +419,7 @@ fun Catalogs(cats: String) {
                         colors[cats + files[index].name] =
                             remember { mutableStateOf(Color.Green) }
 
-                    ImagesTextBox(files[index].name, cats)
+                    ImagesTextBox(context, files[index], cats)
                 }
             }
         } else {
@@ -418,12 +467,109 @@ fun RequestStoragePermissions(
         launcher.launch(permissions)
     }
 }
+//
+//@ExperimentalPagerApi // 1.
+//@Preview
+//@Composable
+//fun TabsWithSwiping() {
+//    var tabIndex by remember { mutableStateOf(0) }
+//    val tabTitles = listOf("Chest", "Biceps", "Triceps", "Shoulder", "Back", "Legs")
+////    val tabTitles = listOf("Hello", "There", "World")
+//    val pagerState = rememberPagerState() // 2.
+//    Column {
+//        ScrollableTabRow(selectedTabIndex = tabIndex,
+//            indicator = { tabPositions -> // 3.
+//                TabRowDefaults.Indicator(
+//                    Modifier.pagerTabIndicatorOffset(
+//                        pagerState,
+//                        tabPositions
+//                    )
+//                )
+//            }) {
+//            tabTitles.forEachIndexed { index, title ->
+//                Tab(selected = tabIndex == index,
+//                    onClick = { tabIndex = index },
+//                    text = { Text(text = title) })
+//            }
+//        }
+//        HorizontalPager(
+//            // 4.
+//            count = tabTitles.size,
+//            state = pagerState,
+//        ) { tabIndex ->
+//            Text(
+//                tabIndex.toString(),
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .background(Color.White)
+//            )
+//        }
+//    }
+//}
+//
+//@ExperimentalPagerApi // 1.
+//@Preview
+//@ExperimentalFoundationApi
+//@Composable
+//fun Tabs2() {
+//    val context = LocalContext.current
+//    val tabs = listOf("Chest", "Biceps", "Triceps", "Shoulder", "Back", "Legs")
+//    var selectedTabIndex by remember { mutableStateOf(0) }
+//    val pagerState = rememberPagerState()
+//    Column(
+//        verticalArrangement = Arrangement.Top
+//    ) {
+//        ScrollableTabRow(
+//            selectedTabIndex,
+//            edgePadding = 0.dp,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .verticalScroll(rememberScrollState()),
+//            indicator = { tabPositions ->
+//                TabRowDefaults.Indicator(
+//                    Modifier.pagerTabIndicatorOffset(
+//                        pagerState,
+//                        tabPositions
+//                    )
+//                )
+//            }
+//        ) {
+//            tabs.forEachIndexed { index, text ->
+//                Tab(
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .background(Color(0xFFB22828)),
+//                    selected = selectedTabIndex == index,
+//                    onClick = { selectedTabIndex = index },
+//                    text = {
+//                        Text(
+//                            text = text,
+//                            fontSize = 14.sp,
+//                            overflow = TextOverflow.Ellipsis,
+//                            maxLines = 1,
+//                        )
+//                    })
+//            }
+//        }
+//        HorizontalPager(
+//            count = tabs.size,
+//            state = pagerState,
+//        ) { tabIndex ->
+//            selectedTabIndex=tabIndex
+////            Catalogs(context, tabs[tabIndex])
+//        }
+//    }
+//}
 
 
+@ExperimentalPagerApi // 1.
+@Preview
 @ExperimentalFoundationApi
 @Composable
 fun Tabs() {
+    val context = LocalContext.current
     val tabs = listOf("Chest", "Biceps", "Triceps", "Shoulder", "Back", "Legs")
+    var selectedTabIndex by remember { mutableStateOf(0) }
     Column {
         ScrollableTabRow(
             selectedTabIndex,
@@ -449,26 +595,7 @@ fun Tabs() {
                     })
             }
         }
-        when (selectedTabIndex) {
-            0 -> {
-                Catalogs(tabs[0])
-            }
-            1 -> {
-                Catalogs(tabs[1])
-            }
-            2 -> {
-                Catalogs(tabs[2])
-            }
-            3 -> {
-                Catalogs(tabs[3])
-            }
-            4 -> {
-                Catalogs(tabs[4])
-            }
-            5 -> {
-                Catalogs(tabs[5])
-            }
-        }
+        Catalogs(context, tabs[selectedTabIndex])
     }
 }
 
@@ -503,7 +630,7 @@ fun SaveColors() {
 
 @Composable
 fun clearData() {
-    var s = ""
+    val s = ""
     val file = File(LocalContext.current.filesDir, "data.txt")
     file.writeText(s)
     val fil = File(LocalContext.current.filesDir, "posdata.txt")
@@ -518,11 +645,13 @@ fun changeColor(s: String) {
     }
 }
 
+@ExperimentalPagerApi // 1.
+@Preview
 @ExperimentalFoundationApi
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     GymScheduleTheme {
-        Tabs()
+
     }
 }
