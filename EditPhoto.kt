@@ -53,6 +53,7 @@ class EditPhoto : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color(0x44B22828)
                 ) {
+//                    TopBar("Edit Exercise")
                     setVal()
                     FirstFun()
                     setVal()

@@ -60,6 +60,7 @@ class UploadPhoto : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color(0x44B22828)
                 ) {
+//                    TopBar("Create new exercise")
                     First()
                 }
             }

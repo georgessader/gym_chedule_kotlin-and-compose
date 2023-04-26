@@ -15,6 +15,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
@@ -24,17 +25,24 @@ import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
@@ -71,8 +79,7 @@ class MainActivity : ComponentActivity() {
                         TodoIntent()
                         LoadData()
                         LoadDataPos()
-//                        Tabs()
-                        TabLayout()
+                        TopBar("First Page")
                     }
                 }
             }
@@ -86,7 +93,38 @@ var position = mapOf("Test" to mutableStateOf("")).toMutableMap()
 var intent = mutableStateOf(Intent())
 var mode = ""
 val tabs = listOf("Chest", "Biceps", "Triceps", "Shoulder", "Back", "Legs")
-var extDir=""
+var extDir = ""
+
+
+@OptIn(ExperimentalPagerApi::class)
+@Composable
+fun TopBar(title: String) {
+    val context= LocalContext.current
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = title) },
+                navigationIcon = {
+                    IconButton(onClick = { /* Handle navigation icon click */ }) {
+                        Icon(Icons.Filled.Menu, contentDescription = "Navigation")
+                    }
+                },
+                actions = {
+//                    IconButton(onClick = { /* Handle menu item 1 click */ }) {
+//                        Icon(Icons.Filled.Favorite, contentDescription = "Menu item 1")
+//                    }
+                    IconButton(onClick = {
+                        context.startActivity(Intent(context, Settings::class.java))
+                    }) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Menu item 2")
+                    }
+                }
+            )
+        }
+    ) {
+        TabLayout()
+    }
+}
 
 
 @OptIn(ExperimentalUnitApi::class)
@@ -94,7 +132,16 @@ var extDir=""
 @Composable
 fun TabLayout() {
     val pagerState = rememberPagerState(0)
-    Column{
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x66B22828))
+            .paint(
+                painterResource(id = R.drawable.images),
+                contentScale = ContentScale.Crop,
+                alpha = 0.2f
+            ),
+    ) {
         Tabs(pagerState = pagerState)
         TabsContent(pagerState = pagerState)
     }
@@ -150,12 +197,10 @@ fun TabsContent(pagerState: PagerState) {
 }
 
 
-
-
 @Composable
 fun TodoIntent() {
-    val context= LocalContext.current
-    extDir=ContextCompat.getExternalFilesDirs(
+    val context = LocalContext.current
+    extDir = ContextCompat.getExternalFilesDirs(
         context,
         Environment.DIRECTORY_PICTURES
     )[0].toString()
@@ -188,7 +233,7 @@ fun TodoIntent() {
                     colors.remove(odirfname)
                 }
 
-                SaveColors()
+                saveColors(context)
                 intent.value.removeExtra("odirfname")
                 intent.value.removeExtra("ndirfname")
                 intent.value.removeExtra("value")
@@ -197,7 +242,7 @@ fun TodoIntent() {
             val dirfname = intent.value.getStringExtra("dirfname")
             position.remove(dirfname!!.replace(".jpg", ""))
             colors.remove(dirfname)
-            SaveColors()
+            saveColors(context)
             SavePosition()
         }
     }
@@ -249,6 +294,7 @@ fun LoadDataPos() {
 
 @Composable
 fun ImageFromFile(file: File, s: String) {
+    val context = LocalContext.current
     val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
 
     val painter: Painter = if (bitmap != null) {
@@ -256,6 +302,15 @@ fun ImageFromFile(file: File, s: String) {
     } else {
         ColorPainter(color = Color.Red)
     }
+
+//
+//    val palette = Palette.from(bitmap).generate()
+//
+//    // Get the dominant color from the Palette
+//    val color = palette.getDominantColor(0)
+
+
+
     var zoom = 1.0f
     var offsetx = 0.0f
     var offsety = 0.0f
@@ -273,15 +328,39 @@ fun ImageFromFile(file: File, s: String) {
 
     ) {
         Card(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(0.9f),
+//                .background(Color.White, RoundedCornerShape(16.dp)),
+//                .paint(
+//                    imageResource(bitmap),
+//                    contentScale = ContentScale.Crop
+//                ),
             shape = RoundedCornerShape(8.dp),
             elevation = 8.dp
         ) {
+//            val backgroundImage = painterResource(R.drawable.image_background)
+            Image(
+                painter = painter,
+                contentDescription = "Background",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .width(100.dp)
+                    .height(100.dp)
+                    .graphicsLayer(
+                        scaleX = zoom * 2.05f,
+                        scaleY = zoom * 2.05f,
+                        translationX = offsetx / 3.6f,
+                        translationY = offsety / 3.6f
+                    ),
+                colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
+                contentScale = ContentScale.FillBounds
+            )
             Image(
                 painter = painter,
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFB22828))
+//                    .background(Color(0xFFB22828))
                     .padding(6.dp)
                     .width(100.dp)
                     .height(100.dp)
@@ -294,6 +373,7 @@ fun ImageFromFile(file: File, s: String) {
                     .clickable {
                         val st = s + file.name
                         changeColor(st)
+                        saveColors(context)
                     },
                 alignment = Alignment.Center,
                 contentDescription = ""
@@ -307,12 +387,13 @@ fun ImageFromFile(file: File, s: String) {
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun ImagesTextBox(cont: Context, file: File, cat: String) {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .padding(2.dp)
-            .background(Color(0xFFB22828), RoundedCornerShape(16.dp)),
+            .background(Color(0xBBB22828), RoundedCornerShape(16.dp)),
     ) {
-//        SaveColors()
+//        saveColors(context)
         Column(
             verticalArrangement = Arrangement.Top,
             modifier = Modifier
@@ -322,8 +403,8 @@ fun ImagesTextBox(cont: Context, file: File, cat: String) {
             ImageFromFile(file, cat)
             Column(
                 verticalArrangement = Arrangement.Top,
-                modifier = Modifier
-                    .background(Color(0xFFB22828), RoundedCornerShape(16.dp))
+//                modifier = Modifier
+//                    .background(Color(0x33B22828), RoundedCornerShape(16.dp))
 //                    .align(Alignment.BottomStart)
             ) {
                 Text(
@@ -402,32 +483,37 @@ fun UploadBox(dir: String) {
 @ExperimentalFoundationApi
 @Composable
 fun Catalogs(context: Context, cats: String) {
-
-    val directory = File(extDir,cats)
+    val directory = File(extDir, cats)
     val files = directory.listFiles()
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    )
+    {
+        LazyVerticalGrid(
+            cells = GridCells.Fixed(3), // set the number of columns
+            contentPadding = PaddingValues(16.dp) // set the padding between items
+        ) {
+            if (!files.isNullOrEmpty()) {
+                items(files.size + 1) { index ->
+                    if (index == files.size) {
+                        UploadBox(cats)
+                    } else {
+                        if (!colors.containsKey(cats + files[index].name))
+                            colors[cats + files[index].name] =
+                                remember { mutableStateOf(Color.Green) }
 
-    LazyVerticalGrid(
-        cells = GridCells.Fixed(3), // set the number of columns
-        contentPadding = PaddingValues(16.dp) // set the padding between items
-    ) {
-        if (!files.isNullOrEmpty()) {
-            items(files.size + 1) { index ->
-                if (index == files.size) {
-                    UploadBox(cats)
-                } else {
-                    if (!colors.containsKey(cats + files[index].name))
-                        colors[cats + files[index].name] =
-                            remember { mutableStateOf(Color.Green) }
-
-                    ImagesTextBox(context, files[index], cats)
+                        ImagesTextBox(context, files[index], cats)
+                    }
                 }
-            }
-        } else {
-            items(1) {
-                UploadBox(cats)
+            } else {
+                items(1) {
+                    UploadBox(cats)
+                }
             }
         }
     }
+
 //    Divider()
 //    Text(colors.keys.toString())
 //    Divider()
@@ -462,7 +548,6 @@ fun RequestStoragePermissions(
             onPermissionDenied()
         }
     }
-
     LaunchedEffect(Unit) {
         launcher.launch(permissions)
     }
@@ -612,8 +697,7 @@ fun SavePosition() {
 }
 
 
-@Composable
-fun SaveColors() {
+fun saveColors(context: Context) {
     var s = ""
     colors.forEach { (key) ->
         s += "$key="
@@ -624,7 +708,7 @@ fun SaveColors() {
         }
     }
 //    s = ""
-    val file = File(LocalContext.current.filesDir, "data.txt")
+    val file = File(context.filesDir, "data.txt")
     file.writeText(s)
 }
 
