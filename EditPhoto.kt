@@ -201,10 +201,6 @@ fun editFile(
         outputStream.close()
 
 
-
-//        position[cat_changed+n] = mutableStateOf("$zoom and ${offset.x},${offset.y}")
-
-
         intent.value = Intent(context, MainActivity::class.java).apply {
             putExtra("mode", "editpos")
             putExtra("odirfname", od + on)
@@ -212,12 +208,6 @@ fun editFile(
             putExtra("value", "$zoom and ${offset.x},${offset.y}")
         }
         context.startActivity(intent.value)
-//        SavePosition()
-
-//        position["$cat_changed$n.jpg"] = mutableStateOf(position[od + on]!!.value)
-//        position.remove(od + on)
-
-//        context.startActivity(Intent(context, MainActivity::class.java))
     } else {
         result = "Empty Exercise name"
     }
