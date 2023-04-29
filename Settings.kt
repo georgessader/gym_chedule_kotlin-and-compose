@@ -1,5 +1,6 @@
 package com.example.gymschedule
 
+import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.gymschedule.ui.theme.GymScheduleTheme
 import org.apache.commons.io.FileUtils.deleteDirectory
@@ -41,13 +43,17 @@ class Settings : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            GymScheduleTheme {
+            val context= LocalContext.current
+            val activity = context as Activity
+            GymScheduleTheme("blue") {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
                     layou()
+                    activity.window.statusBarColor = ContextCompat.getColor(context, barcolor.value)
+                    activity.window.navigationBarColor = ContextCompat.getColor(context, barcolor.value)
                 }
             }
         }
@@ -67,16 +73,64 @@ fun layou() {
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight()
-            .background(Color(0x55B22828)),
+            .background(d2Color.value),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Text(
+            text = "Change Theme Color:",
+            fontSize = 20.sp,
+        )
+        Row(
+            modifier = Modifier.padding(20.dp)
+        )
+        {
+            val context = LocalContext.current
+            Text(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .clickable {
+                        changeTheme(context, "green")
+                    },
+                text = "⬤",
+                fontSize = 40.sp,
+                color = Color(0xFF019131)
+            )
+            Text(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .clickable {
+                        changeTheme(context, "blue")
+                    },
+                text = "⬤",
+                fontSize = 40.sp,
+                color = Color(0xFF429ef5)
+            )
+            Text(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .clickable {
+                        changeTheme(context, "brown")
+                    },
+                text = "⬤",
+                fontSize = 40.sp,
+                color = Color(0xFFB22828)
+            )
+        }
+        Divider(
+            color = Color.White,
+            thickness = 1.dp
+        )
         Text(
             modifier = Modifier
                 .padding(16.dp),
             text = "Backup and restore your data"
         )
-        Button(onClick = {
+        Button(
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = d4Color.value,
+                contentColor = Color.White),
+            onClick = {
             st.value = backupData(context)
         }) {
             Text("BackUp")
@@ -96,9 +150,12 @@ fun layou() {
             {
                 Text(text = file.name.replace("Backup ", ""))
                 Button(
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = d4Color.value,
+                        contentColor = Color.White),
                     modifier = Modifier.padding(5.dp),
                     onClick = {
-                        mode.value="restore"
+                        mode.value = "restore"
                         openDialog.value = true
                         datatext.value = file.name
                     }) {
@@ -112,7 +169,7 @@ fun layou() {
                     modifier = Modifier
                         .size(50.dp)
                         .clickable {
-                            mode.value="delete"
+                            mode.value = "delete"
                             openDialog.value = true
                             datatext.value = file.name
                         }
@@ -125,16 +182,30 @@ fun layou() {
                     openDialog.value = false
                 },
                 title = {
-                    if(mode.value=="restore")
+                    if (mode.value == "restore")
                         Text(text = "Restore Data")
-                    else if(mode.value=="delete")
+                    else if (mode.value == "delete")
                         Text(text = "Delete")
                 },
                 text = {
-                    if(mode.value=="restore")
-                        Text("Are you sure you want to restore ${datatext.value.replace("Backup","")} data?")
-                    else if(mode.value=="delete")
-                        Text("Are you sure you want to delete ${datatext.value.replace("Backup","")} data?")
+                    if (mode.value == "restore")
+                        Text(
+                            "Are you sure you want to restore ${
+                                datatext.value.replace(
+                                    "Backup",
+                                    ""
+                                )
+                            } data?"
+                        )
+                    else if (mode.value == "delete")
+                        Text(
+                            "Are you sure you want to delete ${
+                                datatext.value.replace(
+                                    "Backup",
+                                    ""
+                                )
+                            } data?"
+                        )
                 },
                 buttons = {
                     Row(
@@ -154,9 +225,9 @@ fun layou() {
                             modifier = Modifier
                                 .padding(5.dp),
                             onClick = {
-                                if(mode.value=="restore")
+                                if (mode.value == "restore")
                                     st.value = restoreData(context, datatext.value)
-                                else if(mode.value=="delete")
+                                else if (mode.value == "delete")
                                     deleteFileBackup(context, datatext.value)
                                 openDialog.value = false
                             }
@@ -169,6 +240,36 @@ fun layou() {
         }
 //        Text(text = st.value)
     }
+}
+
+fun changeTheme(context: Context, s: String) {
+    barcol.value=s
+    when (barcol.value) {
+        "green" -> {
+            barcolor.value=R.color.green
+            d1Color.value = Color(0x44019131)
+            d2Color.value = Color(0x66019131)
+            d3Color.value = Color(0xBB019131)
+            d4Color.value = Color(0xFF019131)
+        }
+        "brown" -> {
+            barcolor.value=R.color.brown
+            d1Color.value = Color(0x44B22828)
+            d2Color.value = Color(0x66B22828)
+            d3Color.value = Color(0xBBB22828)
+            d4Color.value = Color(0xFFB22828)
+        }
+        "blue" -> {
+            barcolor.value=R.color.blue
+            d1Color.value = Color(0x44429ef5)
+            d2Color.value = Color(0x66429ef5)
+            d3Color.value = Color(0xBB429ef5)
+            d4Color.value = Color(0xFF429ef5)
+        }
+
+    }
+    val file = File(context.filesDir, "theme.txt")
+    file.writeText(s)
 }
 
 fun deleteFileBackup(context: Context, name: String) {
@@ -307,7 +408,7 @@ fun backupData(context: Context): String {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview4() {
-    GymScheduleTheme {
+    GymScheduleTheme("blue") {
         layou()
     }
 }

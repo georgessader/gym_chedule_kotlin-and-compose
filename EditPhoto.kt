@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.gymschedule.ui.theme.GymScheduleTheme
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
@@ -47,16 +48,20 @@ class EditPhoto : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            GymScheduleTheme {
+            GymScheduleTheme("blue") {
+                val context= LocalContext.current
+                val activity = context as Activity
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0x44B22828)
+                    color = d1Color.value
                 ) {
 //                    TopBar("Edit Exercise")
                     setVal()
                     FirstFun()
                     setVal()
+                    activity.window.statusBarColor = ContextCompat.getColor(context, barcolor.value)
+                    activity.window.navigationBarColor = ContextCompat.getColor(context, barcolor.value)
                 }
             }
         }
@@ -113,6 +118,9 @@ fun dropDownLl(s: String?): String {
     var selectedItem by remember { mutableStateOf(s) }
     Box(modifier = Modifier.width(200.dp)) {
         TextButton(
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = d4Color.value,
+                contentColor = Color.White),
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -130,7 +138,9 @@ fun dropDownLl(s: String?): String {
                     selectedItem = tab
                     expanded = false
                 }) {
-                    Text(tab)
+                    Text(
+                        color= d4Color.value,
+                        text=tab)
                 }
             }
         }
@@ -249,7 +259,7 @@ fun FirstFun() {
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color(0xFFB22828))
+                            .background(d4Color.value)
                             .padding(6.dp)
                             .width(300.dp)
                             .height(300.dp)
@@ -324,7 +334,7 @@ fun FirstFun() {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview3() {
-    GymScheduleTheme {
+    GymScheduleTheme("blue") {
         FirstFun()
     }
 }

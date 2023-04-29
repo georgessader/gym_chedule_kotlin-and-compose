@@ -1,6 +1,7 @@
 package com.example.gymschedule
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
@@ -54,14 +55,18 @@ class UploadPhoto : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            GymScheduleTheme {
+            GymScheduleTheme("blue") {
+                val context= LocalContext.current
+                val activity = context as Activity
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0x44B22828)
+                    color = d1Color.value
                 ) {
 //                    TopBar("Create new exercise")
                     First()
+                    activity.window.statusBarColor = ContextCompat.getColor(context, barcolor.value)
+                    activity.window.navigationBarColor = ContextCompat.getColor(context, barcolor.value)
                 }
             }
         }
@@ -112,7 +117,7 @@ fun ImagePicker() {
         Icon(
             imageVector = Icons.Default.Image,
             contentDescription = "Upload",
-            tint = Color(0xFFB22828),
+            tint = d4Color.value,
             modifier = Modifier
                 .padding(5.dp)
                 .padding(horizontal = 10.dp)
@@ -122,7 +127,7 @@ fun ImagePicker() {
         Icon(
             imageVector = Icons.Default.CameraAlt,
             contentDescription = "Camera",
-            tint = Color(0xFFB22828),
+            tint = d4Color.value,
             modifier = Modifier
                 .padding(5.dp)
                 .padding(horizontal = 10.dp)
@@ -144,6 +149,9 @@ fun dropDownL(): String {
     var selectedItem by remember { mutableStateOf(direc) }
     Box(modifier = Modifier.width(200.dp)) {
         TextButton(
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = d4Color.value,
+                contentColor = Color.White),
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -161,7 +169,9 @@ fun dropDownL(): String {
                     selectedItem = tab
                     expanded = false
                 }) {
-                    Text(tab)
+                    Text(
+                        color= d4Color.value,
+                        text=tab)
                 }
             }
         }
@@ -199,7 +209,7 @@ fun First() {
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color(0xFFB22828))
+                                .background(d4Color.value)
                                 .padding(6.dp)
                                 .width(300.dp)
                                 .height(300.dp)
@@ -238,6 +248,9 @@ fun First() {
             )
         )
         Button(
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = d4Color.value,
+                contentColor = Color.White),
             onClick = {
                 if (bitmap.value != null && ename != "") {
                     val imageDirectory = File(
@@ -303,7 +316,7 @@ fun First() {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview2() {
-    GymScheduleTheme {
+    GymScheduleTheme("blue") {
         First()
     }
 }

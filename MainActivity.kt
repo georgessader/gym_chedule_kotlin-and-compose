@@ -10,8 +10,8 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.gymschedule.ui.theme.GymScheduleTheme
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
@@ -47,6 +47,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.WindowCompat
+import com.example.gymschedule.ui.theme.*
 import com.google.accompanist.pager.*
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
@@ -55,16 +58,15 @@ import java.io.FileReader
 
 
 class MainActivity : ComponentActivity() {
-
     @OptIn(ExperimentalPagerApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            GymScheduleTheme {
+            GymScheduleTheme(barcol.value) {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0x44B22828)
+                    color = d1Color.value
                 ) {
                     RequestStoragePermissions(
                         onPermissionGranted = {
@@ -76,6 +78,7 @@ class MainActivity : ComponentActivity() {
                     )
                     if (granted.value) {
 //                        clearData()
+                        loadThemeColor(LocalContext.current)
                         TodoIntent()
                         LoadData()
                         LoadDataPos()
@@ -87,6 +90,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
 val granted = mutableStateOf(false)
 var colors = mapOf("Test" to mutableStateOf(Color.Green)).toMutableMap()
 var position = mapOf("Test" to mutableStateOf("")).toMutableMap()
@@ -96,10 +100,59 @@ val tabs = listOf("Chest", "Biceps", "Triceps", "Shoulder", "Back", "Legs")
 var extDir = ""
 
 
+var barcol = mutableStateOf("blue")
+val barcolor=mutableStateOf(R.color.blue)
+var d1Color = mutableStateOf(Color(0x44429ef5))
+var d2Color = mutableStateOf(Color(0x66429ef5))
+var d3Color = mutableStateOf(Color(0xBB429ef5))
+var d4Color = mutableStateOf(Color(0xFF429ef5))
+
+
+fun loadThemeColor(context: Context) {
+    val f = File(context.filesDir, "theme.txt")
+    if (f.exists()) {
+        val br = BufferedReader(FileReader(f))
+        val s: String
+        if (br.readLine() != null) {
+            s = f.readLines()[0]
+            barcol.value=s
+            val activity = context as Activity
+//            val systemUiController = rememberSystemUiController()
+//            window.statusBarColor = ContextCompat.getColor(context, R.color.green)
+            when (barcol.value) {
+                "green" -> {
+                    barcolor.value=R.color.green
+                    d1Color.value = Color(0x44019131)
+                    d2Color.value = Color(0x66019131)
+                    d3Color.value = Color(0xBB019131)
+                    d4Color.value = Color(0xFF019131)
+                }
+                "brown" -> {
+                    barcolor.value=R.color.brown
+                    d1Color.value = Color(0x44B22828)
+                    d2Color.value = Color(0x66B22828)
+                    d3Color.value = Color(0xBBB22828)
+                    d4Color.value = Color(0xFFB22828)
+                }
+                "blue" -> {
+                    barcolor.value=R.color.blue
+                    d1Color.value = Color(0x44429ef5)
+                    d2Color.value = Color(0x66429ef5)
+                    d3Color.value = Color(0xBB429ef5)
+                    d4Color.value = Color(0xFF429ef5)
+                }
+            }
+            activity.window.statusBarColor = ContextCompat.getColor(context, barcolor.value)
+            activity.window.navigationBarColor = ContextCompat.getColor(context, barcolor.value)
+        }
+    }
+}
+
+
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun TopBar(title: String) {
-    val context= LocalContext.current
+    val context = LocalContext.current
     Scaffold(
         topBar = {
             TopAppBar(
@@ -135,7 +188,7 @@ fun TabLayout() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0x66B22828))
+            .background(d2Color.value)
             .paint(
                 painterResource(id = R.drawable.images),
                 contentScale = ContentScale.Crop,
@@ -310,7 +363,6 @@ fun ImageFromFile(file: File, s: String) {
 //    val color = palette.getDominantColor(0)
 
 
-
     var zoom = 1.0f
     var offsetx = 0.0f
     var offsety = 0.0f
@@ -391,7 +443,7 @@ fun ImagesTextBox(cont: Context, file: File, cat: String) {
     Box(
         modifier = Modifier
             .padding(2.dp)
-            .background(Color(0xBBB22828), RoundedCornerShape(16.dp)),
+            .background(d3Color.value, RoundedCornerShape(16.dp)),
     ) {
 //        saveColors(context)
         Column(
@@ -455,7 +507,7 @@ fun UploadBox(dir: String) {
     Box(
         modifier = Modifier
             .padding(2.dp)
-            .border(4.dp, Color(0xFFB22828), RoundedCornerShape(16.dp))
+            .border(4.dp, d4Color.value, RoundedCornerShape(16.dp))
             .size(180.dp)
     ) {
         IconButton(
@@ -471,7 +523,7 @@ fun UploadBox(dir: String) {
             Icon(
                 imageVector = Icons.Outlined.AddCircle,
                 contentDescription = "Edit",
-                tint = Color(0xFFB22828),
+                tint = d4Color.value,
                 modifier = Modifier
                     .size(60.dp)
             )
@@ -667,7 +719,7 @@ fun Tabs() {
                 Tab(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFFB22828)),
+                        .background(d4Color.value),
                     selected = selectedTabIndex == index,
                     onClick = { selectedTabIndex = index },
                     text = {
@@ -735,7 +787,7 @@ fun changeColor(s: String) {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
-    GymScheduleTheme {
+    GymScheduleTheme(barcol.value) {
 
     }
 }
